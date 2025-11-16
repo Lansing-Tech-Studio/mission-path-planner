@@ -114,85 +114,103 @@ class PathCalculator {
     calculateArcMove(startX, startY, startAngle, direction, degrees, robotConfig) {
         const points = [];
         
-        // Calculate turning radius based on direction
-        // direction: -100 (sharp left) to +100 (sharp right)
-        // When direction = ±100, turn in place (radius = wheelBase/2)
-        // When direction approaches 0, radius approaches infinity
+        // Spike Prime movement behavior:
+        // - "degrees" parameter specifies the FASTER motor's rotation
+        // - The slower motor gets reduced by: (100 - direction * 2) / 100
+        // - For direction = 30: slower motor = (100 - 60) / 100 = 40% of faster motor
+        // - Positive direction = turn right (right motor slower)
+        // - Negative direction = turn left (left motor slower)
         
-        let turnRadius;
-        let leftWheelDist, rightWheelDist;
+        let leftWheelDegrees, rightWheelDegrees;
         
-        if (Math.abs(direction) === 100) {
-            // Turn in place
-            const wheelRotations = degrees / 360;
-            const arcLength = wheelRotations * robotConfig.wheelCircumference;
-            
-            // For turning in place, each wheel goes opposite directions
-            // The robot rotates around its center
-            leftWheelDist = direction > 0 ? arcLength : -arcLength;
-            rightWheelDist = direction > 0 ? -arcLength : arcLength;
-            
-            turnRadius = 0; // Special case
+        if (direction === 0) {
+            // This shouldn't happen as straight moves are handled separately
+            leftWheelDegrees = degrees;
+            rightWheelDegrees = degrees;
+        } else if (direction > 0) {
+            // Turning right: left motor is faster, right motor is slower
+            leftWheelDegrees = degrees;
+            const reductionFactor = (100 - direction * 2) / 100;
+            rightWheelDegrees = degrees * Math.max(0, reductionFactor); // Ensure non-negative
         } else {
-            // Calculate arc movement
-            // Map direction to turn sharpness
-            // abs(direction) closer to 0 = wider turn, closer to 100 = tighter turn
-            
-            const directionFactor = Math.abs(direction) / 100;
-            
-            // Minimum turn radius is wheelBase/2, maximum is essentially infinity
-            // We'll use a scale where direction 1 gives a large radius and 99 gives near minimum
-            const minRadius = robotConfig.wheelBase / 2;
-            const maxRadius = 500; // 5 meters max radius for reasonable turns
-            
-            // Exponential scaling for more natural feel
-            turnRadius = minRadius + (maxRadius - minRadius) * Math.pow(1 - directionFactor, 3);
-            
-            // Calculate wheel distances
-            const wheelRotations = degrees / 360;
-            const centerArcLength = wheelRotations * robotConfig.wheelCircumference;
-            
-            if (direction > 0) {
-                // Turning right
-                leftWheelDist = centerArcLength * (1 + robotConfig.wheelBase / (2 * turnRadius));
-                rightWheelDist = centerArcLength * (1 - robotConfig.wheelBase / (2 * turnRadius));
-            } else {
-                // Turning left
-                leftWheelDist = centerArcLength * (1 - robotConfig.wheelBase / (2 * turnRadius));
-                rightWheelDist = centerArcLength * (1 + robotConfig.wheelBase / (2 * turnRadius));
-            }
+            // Turning left: right motor is faster, left motor is slower
+            rightWheelDegrees = degrees;
+            const reductionFactor = (100 - Math.abs(direction) * 2) / 100;
+            leftWheelDegrees = degrees * Math.max(0, reductionFactor); // Ensure non-negative
         }
         
-        // Calculate angular change
+        // Handle special cases where one motor goes backwards (direction >= 50 or <= -50)
+        if (direction >= 50) {
+            // Right motor reverses
+            const reductionFactor = (100 - direction * 2) / 100;
+            rightWheelDegrees = degrees * reductionFactor; // Will be negative
+        } else if (direction <= -50) {
+            // Left motor reverses
+            const reductionFactor = (100 - Math.abs(direction) * 2) / 100;
+            leftWheelDegrees = degrees * reductionFactor; // Will be negative
+        }
+        
+        // Convert wheel rotations to distances
+        const leftWheelDist = (leftWheelDegrees / 360) * robotConfig.wheelCircumference;
+        const rightWheelDist = (rightWheelDegrees / 360) * robotConfig.wheelCircumference;
+        
+        // Calculate angular change using differential drive kinematics
+        // deltaAngle = (rightDist - leftDist) / wheelBase
+        const deltaAngleCm = rightWheelDist - leftWheelDist;
+        const deltaAngle = (deltaAngleCm / robotConfig.wheelBase) * (180 / Math.PI);
+        
+        // Calculate the average distance traveled (center of robot)
         const avgDistance = (leftWheelDist + rightWheelDist) / 2;
-        const deltaAngle = ((rightWheelDist - leftWheelDist) / robotConfig.wheelBase) * (180 / Math.PI);
         
         // Generate points along the arc
         const numSteps = Math.max(2, Math.ceil(Math.abs(degrees) / 5));
         
-        for (let i = 0; i <= numSteps; i++) {
-            const t = i / numSteps;
-            
-            if (turnRadius === 0) {
-                // Turning in place - position stays the same, only angle changes
+        if (Math.abs(deltaAngle) < 0.01) {
+            // Essentially straight (shouldn't happen but handle gracefully)
+            for (let i = 0; i <= numSteps; i++) {
+                const t = i / numSteps;
+                const distance = avgDistance * t;
+                
+                const angleRad = (startAngle * Math.PI) / 180;
+                const x = startX + distance * Math.cos(angleRad);
+                const y = startY + distance * Math.sin(angleRad);
+                
+                points.push({
+                    x: x,
+                    y: y,
+                    angle: startAngle
+                });
+            }
+        } else if (Math.abs(leftWheelDist + rightWheelDist) < 0.01) {
+            // Turning in place (both wheels move equal distances in opposite directions)
+            for (let i = 0; i <= numSteps; i++) {
+                const t = i / numSteps;
                 points.push({
                     x: startX,
                     y: startY,
                     angle: startAngle + deltaAngle * t
                 });
-            } else {
-                // Moving in an arc
+            }
+        } else {
+            // Moving in an arc
+            // Calculate turn radius: R = avgDistance / deltaAngleRadians
+            const deltaAngleRad = (deltaAngle * Math.PI) / 180;
+            const turnRadius = Math.abs(avgDistance / deltaAngleRad);
+            
+            // Calculate center of turn circle
+            // The center is perpendicular to the starting direction
+            const perpAngle = startAngle + (deltaAngle > 0 ? -90 : 90);
+            const perpAngleRad = (perpAngle * Math.PI) / 180;
+            const centerX = startX + turnRadius * Math.cos(perpAngleRad);
+            const centerY = startY + turnRadius * Math.sin(perpAngleRad);
+            
+            // Generate points along the arc
+            for (let i = 0; i <= numSteps; i++) {
+                const t = i / numSteps;
                 const currentAngle = startAngle + deltaAngle * t;
-                const distance = avgDistance * t;
                 
-                // Calculate center of turn circle
-                const perpAngle = startAngle + (direction > 0 ? -90 : 90);
-                const perpAngleRad = (perpAngle * Math.PI) / 180;
-                const centerX = startX + turnRadius * Math.cos(perpAngleRad);
-                const centerY = startY + turnRadius * Math.sin(perpAngleRad);
-                
-                // Calculate position on arc
-                const angleFromCenter = perpAngle + 180 + (direction > 0 ? deltaAngle * t : -deltaAngle * t);
+                // Calculate position on arc relative to center
+                const angleFromCenter = perpAngle + 180 + (deltaAngle > 0 ? deltaAngle * t : -deltaAngle * t);
                 const angleFromCenterRad = (angleFromCenter * Math.PI) / 180;
                 
                 const x = centerX + turnRadius * Math.cos(angleFromCenterRad);
