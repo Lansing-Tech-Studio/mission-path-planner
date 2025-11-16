@@ -122,7 +122,7 @@ This is an educational tool for FLL teams. Suggestions and improvements are welc
 
 ## Support
 
-For FLL-specific questions, refer to the official FIRST website: https://www.firstinspires.org/
+For FLL-specific questions, refer to the official FIRST website: <https://www.firstinspires.org/>
 
 ---
 
