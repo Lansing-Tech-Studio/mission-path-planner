@@ -70,10 +70,10 @@ class BlockManager {
         if (block) {
             block[field] = value;
             
-            // Validate move blocks
+            // Validate move blocks and update styling without re-rendering
             if (block.type === 'move') {
                 block.valid = this.validateMoveBlock(block);
-                this.renderBlocks();
+                this.updateBlockValidation(id, block.valid);
             }
             
             // Trigger update
@@ -81,6 +81,21 @@ class BlockManager {
                 window.missionPlanner.update();
             }
         }
+    }
+    
+    updateBlockValidation(id, isValid) {
+        // Find the block element and update its validation class without re-rendering
+        const blockElements = this.container.querySelectorAll('.program-block');
+        blockElements.forEach(el => {
+            const blockId = parseInt(el.dataset.blockId);
+            if (blockId === id) {
+                if (isValid === false) {
+                    el.classList.add('invalid');
+                } else {
+                    el.classList.remove('invalid');
+                }
+            }
+        });
     }
     
     validateMoveBlock(block) {
@@ -119,6 +134,7 @@ class BlockManager {
     createBlockElement(block, index) {
         const div = document.createElement('div');
         div.className = `program-block ${block.type}-block`;
+        div.dataset.blockId = block.id;
         
         if (block.type === 'move' && block.valid === false) {
             div.classList.add('invalid');
