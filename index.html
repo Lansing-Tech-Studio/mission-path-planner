@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLL Mission Path Planner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: Configuration and Program (25%) -->
+        <div class="left-panel">
+            <h1>Mission Planner</h1>
+            
+            <!-- Team Info Section -->
+            <section class="section">
+                <h2>Team Info</h2>
+                <div class="form-group">
+                    <label for="teamName">Team Name:</label>
+                    <input type="text" id="teamName" placeholder="Enter team name">
+                </div>
+                <div class="form-group">
+                    <label for="teamLogo">Team Logo URL (optional):</label>
+                    <input type="url" id="teamLogo" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description (optional):</label>
+                    <textarea id="description" rows="3" placeholder="Project description..."></textarea>
+                </div>
+            </section>
+
+            <!-- Mat Selection Section -->
+            <section class="section">
+                <h2>Mission Mat</h2>
+                <div class="form-group">
+                    <label for="matSelect">Select Mat:</label>
+                    <select id="matSelect">
+                        <option value="blank">Blank Mat</option>
+                        <option value="2024-submerged">2024 Submerged</option>
+                        <option value="2023-masterpiece">2023 Masterpiece</option>
+                        <option value="custom">Custom URL</option>
+                    </select>
+                </div>
+                <div class="form-group" id="customMatUrlGroup" style="display: none;">
+                    <label for="customMatUrl">Custom Mat URL:</label>
+                    <input type="url" id="customMatUrl" placeholder="https://...">
+                </div>
+            </section>
+
+            <!-- Robot Configuration Section -->
+            <section class="section">
+                <h2>Robot Configuration</h2>
+                <div class="form-group">
+                    <label for="robotLength">Length (cm):</label>
+                    <input type="number" id="robotLength" value="20" min="1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="robotWidth">Width (cm):</label>
+                    <input type="number" id="robotWidth" value="15" min="1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="wheelOffset">Wheel Offset from Back (cm):</label>
+                    <input type="number" id="wheelOffset" value="5" min="0" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="wheelCircumference">Wheel Circumference (cm):</label>
+                    <input type="number" id="wheelCircumference" value="17.6" min="0.1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="wheelBase">Wheel Base (cm):</label>
+                    <input type="number" id="wheelBase" value="12" min="0.1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="robotImageUrl">Robot Image URL (optional):</label>
+                    <input type="url" id="robotImageUrl" placeholder="https://...">
+                </div>
+            </section>
+
+            <!-- Starting Position Section -->
+            <section class="section">
+                <h2>Starting Position</h2>
+                <div class="form-group">
+                    <label for="startX">X Position (cm):</label>
+                    <input type="number" id="startX" value="30" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="startY">Y Position (cm):</label>
+                    <input type="number" id="startY" value="30" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label for="startAngle">Orientation (degrees):</label>
+                    <input type="number" id="startAngle" value="0" step="1">
+                </div>
+            </section>
+
+            <!-- Program Section -->
+            <section class="section">
+                <h2>Program</h2>
+                <div id="programBlocks" class="program-blocks"></div>
+                <div class="button-group">
+                    <button id="addTextBlock" class="btn btn-secondary">Add Text Block</button>
+                    <button id="addMoveBlock" class="btn btn-primary">Add Move Block</button>
+                </div>
+            </section>
+
+            <!-- Actions Section -->
+            <section class="section">
+                <h2>Actions</h2>
+                <div class="form-group">
+                    <label for="planDate">Plan Date:</label>
+                    <input type="date" id="planDate">
+                </div>
+                <div class="button-group">
+                    <button id="exportBtn" class="btn btn-primary">Export JSON</button>
+                    <button id="importBtn" class="btn btn-secondary">Import JSON</button>
+                    <button id="printBtn" class="btn btn-secondary">Print Plan</button>
+                </div>
+                <input type="file" id="importFile" accept=".json" style="display: none;">
+            </section>
+        </div>
+
+        <!-- Right Panel: Canvas (75%) -->
+        <div class="right-panel">
+            <canvas id="missionCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Hidden print template -->
+    <div id="printTemplate" style="display: none;">
+        <div class="print-content">
+            <div class="print-header">
+                <h1 id="printTeamName"></h1>
+                <img id="printTeamLogo" style="max-height: 60px;">
+                <p id="printPlanDate"></p>
+            </div>
+            <div class="print-description"></div>
+            <div class="print-canvas-container">
+                <canvas id="printCanvas"></canvas>
+            </div>
+            <div class="print-program">
+                <h2>Program</h2>
+                <div id="printProgramBlocks"></div>
+            </div>
+            <div class="print-config">
+                <h2>Robot Configuration</h2>
+                <div id="printRobotConfig"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/robot.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/blocks.js"></script>
+    <script src="js/pathCalculator.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/print.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

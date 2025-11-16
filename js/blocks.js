@@ -1,0 +1,287 @@
+// Block-based Program Management
+class BlockManager {
+    constructor() {
+        this.blocks = [];
+        this.container = document.getElementById('programBlocks');
+        this.nextId = 1;
+    }
+    
+    addTextBlock() {
+        const block = {
+            id: this.nextId++,
+            type: 'text',
+            content: ''
+        };
+        
+        this.blocks.push(block);
+        this.renderBlocks();
+        return block;
+    }
+    
+    addMoveBlock() {
+        const block = {
+            id: this.nextId++,
+            type: 'move',
+            direction: 0,
+            degrees: 360
+        };
+        
+        this.blocks.push(block);
+        this.renderBlocks();
+        return block;
+    }
+    
+    removeBlock(id) {
+        this.blocks = this.blocks.filter(b => b.id !== id);
+        this.renderBlocks();
+        
+        // Trigger update
+        if (window.missionPlanner) {
+            window.missionPlanner.update();
+        }
+    }
+    
+    moveBlockUp(id) {
+        const index = this.blocks.findIndex(b => b.id === id);
+        if (index > 0) {
+            [this.blocks[index - 1], this.blocks[index]] = [this.blocks[index], this.blocks[index - 1]];
+            this.renderBlocks();
+            
+            if (window.missionPlanner) {
+                window.missionPlanner.update();
+            }
+        }
+    }
+    
+    moveBlockDown(id) {
+        const index = this.blocks.findIndex(b => b.id === id);
+        if (index < this.blocks.length - 1) {
+            [this.blocks[index], this.blocks[index + 1]] = [this.blocks[index + 1], this.blocks[index]];
+            this.renderBlocks();
+            
+            if (window.missionPlanner) {
+                window.missionPlanner.update();
+            }
+        }
+    }
+    
+    updateBlock(id, field, value) {
+        const block = this.blocks.find(b => b.id === id);
+        if (block) {
+            block[field] = value;
+            
+            // Validate move blocks
+            if (block.type === 'move') {
+                block.valid = this.validateMoveBlock(block);
+                this.renderBlocks();
+            }
+            
+            // Trigger update
+            if (window.missionPlanner) {
+                window.missionPlanner.update();
+            }
+        }
+    }
+    
+    validateMoveBlock(block) {
+        const direction = parseFloat(block.direction);
+        const degrees = parseFloat(block.degrees);
+        
+        if (isNaN(direction) || isNaN(degrees)) {
+            return false;
+        }
+        
+        if (direction < -100 || direction > 100) {
+            return false;
+        }
+        
+        if (degrees <= 0) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    renderBlocks() {
+        this.container.innerHTML = '';
+        
+        if (this.blocks.length === 0) {
+            this.container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No blocks added yet. Click "Add Text Block" or "Add Move Block" to get started.</p>';
+            return;
+        }
+        
+        this.blocks.forEach((block, index) => {
+            const blockElement = this.createBlockElement(block, index);
+            this.container.appendChild(blockElement);
+        });
+    }
+    
+    createBlockElement(block, index) {
+        const div = document.createElement('div');
+        div.className = `program-block ${block.type}-block`;
+        
+        if (block.type === 'move' && block.valid === false) {
+            div.classList.add('invalid');
+        }
+        
+        // Block header with type and controls
+        const header = document.createElement('div');
+        header.className = 'block-header';
+        
+        const typeLabel = document.createElement('span');
+        typeLabel.className = 'block-type';
+        typeLabel.textContent = block.type === 'text' ? 'Text/Comment' : 'Move';
+        header.appendChild(typeLabel);
+        
+        const controls = document.createElement('div');
+        controls.style.display = 'flex';
+        controls.style.gap = '4px';
+        
+        // Up button
+        if (index > 0) {
+            const upBtn = document.createElement('button');
+            upBtn.textContent = '▲';
+            upBtn.className = 'btn btn-secondary';
+            upBtn.style.padding = '2px 8px';
+            upBtn.style.fontSize = '10px';
+            upBtn.onclick = () => this.moveBlockUp(block.id);
+            controls.appendChild(upBtn);
+        }
+        
+        // Down button
+        if (index < this.blocks.length - 1) {
+            const downBtn = document.createElement('button');
+            downBtn.textContent = '▼';
+            downBtn.className = 'btn btn-secondary';
+            downBtn.style.padding = '2px 8px';
+            downBtn.style.fontSize = '10px';
+            downBtn.onclick = () => this.moveBlockDown(block.id);
+            controls.appendChild(downBtn);
+        }
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '✕';
+        deleteBtn.className = 'btn btn-danger';
+        deleteBtn.onclick = () => this.removeBlock(block.id);
+        controls.appendChild(deleteBtn);
+        
+        header.appendChild(controls);
+        div.appendChild(header);
+        
+        // Block content
+        const content = document.createElement('div');
+        content.className = 'block-content';
+        
+        if (block.type === 'text') {
+            const textarea = document.createElement('textarea');
+            textarea.placeholder = 'Enter comment or pseudocode...';
+            textarea.value = block.content || '';
+            textarea.rows = 2;
+            textarea.oninput = (e) => this.updateBlock(block.id, 'content', e.target.value);
+            content.appendChild(textarea);
+        } else if (block.type === 'move') {
+            const moveInputs = document.createElement('div');
+            moveInputs.className = 'block-move-inputs';
+            
+            // Direction input
+            const directionGroup = document.createElement('div');
+            const directionLabel = document.createElement('label');
+            directionLabel.textContent = 'Direction (-100 to 100):';
+            const directionInput = document.createElement('input');
+            directionInput.type = 'number';
+            directionInput.value = block.direction || 0;
+            directionInput.min = -100;
+            directionInput.max = 100;
+            directionInput.step = 1;
+            directionInput.oninput = (e) => this.updateBlock(block.id, 'direction', e.target.value);
+            directionGroup.appendChild(directionLabel);
+            directionGroup.appendChild(directionInput);
+            
+            // Degrees input
+            const degreesGroup = document.createElement('div');
+            const degreesLabel = document.createElement('label');
+            degreesLabel.textContent = 'Degrees:';
+            const degreesInput = document.createElement('input');
+            degreesInput.type = 'number';
+            degreesInput.value = block.degrees || 360;
+            degreesInput.min = 0;
+            degreesInput.step = 1;
+            degreesInput.oninput = (e) => this.updateBlock(block.id, 'degrees', e.target.value);
+            degreesGroup.appendChild(degreesLabel);
+            degreesGroup.appendChild(degreesInput);
+            
+            moveInputs.appendChild(directionGroup);
+            moveInputs.appendChild(degreesGroup);
+            content.appendChild(moveInputs);
+            
+            // Show helper text
+            const helper = document.createElement('small');
+            helper.style.color = '#666';
+            helper.style.fontSize = '10px';
+            helper.style.marginTop = '4px';
+            helper.textContent = '0 = straight, negative = left, positive = right';
+            content.appendChild(helper);
+        }
+        
+        div.appendChild(content);
+        
+        return div;
+    }
+    
+    getProgram() {
+        // Return validated program blocks
+        return this.blocks.map(block => {
+            if (block.type === 'text') {
+                return {
+                    type: 'text',
+                    content: block.content || ''
+                };
+            } else if (block.type === 'move') {
+                const direction = parseFloat(block.direction);
+                const degrees = parseFloat(block.degrees);
+                
+                return {
+                    type: 'move',
+                    direction: isNaN(direction) ? 0 : direction,
+                    degrees: isNaN(degrees) ? 0 : degrees,
+                    valid: this.validateMoveBlock(block)
+                };
+            }
+            return null;
+        }).filter(b => b !== null);
+    }
+    
+    loadProgram(program) {
+        this.blocks = [];
+        this.nextId = 1;
+        
+        if (!program || !Array.isArray(program)) {
+            this.renderBlocks();
+            return;
+        }
+        
+        program.forEach(block => {
+            if (block.type === 'text') {
+                const newBlock = {
+                    id: this.nextId++,
+                    type: 'text',
+                    content: block.content || ''
+                };
+                this.blocks.push(newBlock);
+            } else if (block.type === 'move') {
+                const newBlock = {
+                    id: this.nextId++,
+                    type: 'move',
+                    direction: block.direction || 0,
+                    degrees: block.degrees || 360,
+                    valid: true
+                };
+                newBlock.valid = this.validateMoveBlock(newBlock);
+                this.blocks.push(newBlock);
+            }
+        });
+        
+        this.renderBlocks();
+    }
+}
