@@ -36,7 +36,7 @@
                     <label for="matSelect">Select Mat:</label>
                     <select id="matSelect">
                         <option value="blank">Blank Mat</option>
-                        <option value="2024-submerged">2024 Submerged</option>
+                        <option value="2024-submerged" selected>2024 Submerged</option>
                         <option value="2023-masterpiece">2023 Masterpiece</option>
                         <option value="custom">Custom URL</option>
                     </select>
@@ -52,7 +52,7 @@
                 <h2>Robot Configuration</h2>
                 <div class="form-group">
                     <label for="robotLength">Length (cm):</label>
-                    <input type="number" id="robotLength" value="20" min="1" step="0.1">
+                    <input type="number" id="robotLength" value="16.5" min="1" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="robotWidth">Width (cm):</label>
@@ -60,11 +60,11 @@
                 </div>
                 <div class="form-group">
                     <label for="wheelOffset">Wheel Offset from Back (cm):</label>
-                    <input type="number" id="wheelOffset" value="5" min="0" step="0.1">
+                    <input type="number" id="wheelOffset" value="3.1" min="0" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="wheelCircumference">Wheel Circumference (cm):</label>
-                    <input type="number" id="wheelCircumference" value="17.6" min="0.1" step="0.1">
+                    <input type="number" id="wheelCircumference" value="19.6" min="0.1" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="wheelBase">Wheel Base (cm):</label>
@@ -81,15 +81,15 @@
                 <h2>Starting Position</h2>
                 <div class="form-group">
                     <label for="startX">X Position (cm):</label>
-                    <input type="number" id="startX" value="30" step="0.1">
+                    <input type="number" id="startX" value="0" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="startY">Y Position (cm):</label>
-                    <input type="number" id="startY" value="30" step="0.1">
+                    <input type="number" id="startY" value="114" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="startAngle">Orientation (degrees):</label>
-                    <input type="number" id="startAngle" value="0" step="1">
+                    <input type="number" id="startAngle" value="270" step="1">
                 </div>
             </section>
 
