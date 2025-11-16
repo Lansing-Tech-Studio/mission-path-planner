@@ -17,7 +17,8 @@ class PathCalculator {
         const points = [{
             x: x,
             y: y,
-            angle: angle
+            angle: angle,
+            segmentEnd: false
         }];
         
         let allValid = true;
@@ -47,7 +48,10 @@ class PathCalculator {
                 
                 // Add new points to path (skip first point as it's the same as last)
                 for (let j = 1; j < newPoints.length; j++) {
-                    points.push(newPoints[j]);
+                    const point = newPoints[j];
+                    // Mark the last point of each segment
+                    point.segmentEnd = (j === newPoints.length - 1);
+                    points.push(point);
                 }
                 
                 // Update current position

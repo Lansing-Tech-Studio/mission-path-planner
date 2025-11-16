@@ -30,9 +30,9 @@ class CanvasRenderer {
         // Draw mat background
         this.drawMat(matUrl);
         
-        // Draw path if valid
+        // Draw path if valid (body outlines and center line only)
         if (path && path.points && path.points.length > 0) {
-            this.drawPath(path, robotConfig);
+            this.drawPathBodyAndLine(path, robotConfig);
         }
         
         // Draw starting robot position
@@ -42,6 +42,11 @@ class CanvasRenderer {
         if (path && path.points && path.points.length > 0) {
             const lastPoint = path.points[path.points.length - 1];
             this.drawRobot(robotConfig, lastPoint.x, lastPoint.y, lastPoint.angle, 0.5);
+        }
+        
+        // Draw path dots and markers on top of robots
+        if (path && path.points && path.points.length > 0) {
+            this.drawPathMarkers(path);
         }
     }
     
@@ -107,12 +112,12 @@ class CanvasRenderer {
         img.src = url;
     }
     
-    drawPath(path, robotConfig) {
+    drawPathBodyAndLine(path, robotConfig) {
         if (!path.points || path.points.length === 0) return;
         
-        // Draw robot body outline along path
-        this.ctx.fillStyle = 'rgba(76, 175, 80, 0.15)';
-        this.ctx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
+        // Draw robot body outline along path (lighter, wider)
+        this.ctx.fillStyle = 'rgba(76, 175, 80, 0.12)';
+        this.ctx.strokeStyle = 'rgba(76, 175, 80, 0.25)';
         this.ctx.lineWidth = 1;
         
         for (let i = 0; i < path.points.length; i++) {
@@ -120,8 +125,8 @@ class CanvasRenderer {
             this.drawRobotOutline(robotConfig, point.x, point.y, point.angle);
         }
         
-        // Draw center path line
-        this.ctx.strokeStyle = '#4CAF50';
+        // Draw center path line (darker, thinner)
+        this.ctx.strokeStyle = '#2E7D32';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         
@@ -138,23 +143,56 @@ class CanvasRenderer {
         }
         
         this.ctx.stroke();
+    }
+    
+    drawPathMarkers(path) {
+        if (!path.points || path.points.length === 0) return;
         
-        // Draw start point
-        if (path.points.length > 0) {
-            const start = path.points[0];
-            this.ctx.fillStyle = '#4CAF50';
+        // Draw dots at each path point (axle center point)
+        this.ctx.fillStyle = '#1B5E20';
+        for (let i = 0; i < path.points.length; i += Math.max(1, Math.floor(path.points.length / 50))) {
+            const point = path.points[i];
             this.ctx.beginPath();
-            this.ctx.arc(start.x * this.scale, start.y * this.scale, 4, 0, Math.PI * 2);
+            this.ctx.arc(point.x * this.scale, point.y * this.scale, 2, 0, Math.PI * 2);
             this.ctx.fill();
         }
         
-        // Draw end point
+        // Draw larger dots at segment end points
+        this.ctx.fillStyle = '#4CAF50';
+        this.ctx.strokeStyle = '#2E7D32';
+        this.ctx.lineWidth = 1.5;
+        for (let i = 0; i < path.points.length; i++) {
+            const point = path.points[i];
+            if (point.segmentEnd) {
+                this.ctx.beginPath();
+                this.ctx.arc(point.x * this.scale, point.y * this.scale, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
+        }
+        
+        // Draw start point (larger, green)
+        if (path.points.length > 0) {
+            const start = path.points[0];
+            this.ctx.fillStyle = '#4CAF50';
+            this.ctx.strokeStyle = '#2E7D32';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(start.x * this.scale, start.y * this.scale, 5, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.stroke();
+        }
+        
+        // Draw end point (larger, red)
         if (path.points.length > 1) {
             const end = path.points[path.points.length - 1];
             this.ctx.fillStyle = '#f44336';
+            this.ctx.strokeStyle = '#c62828';
+            this.ctx.lineWidth = 2;
             this.ctx.beginPath();
-            this.ctx.arc(end.x * this.scale, end.y * this.scale, 4, 0, Math.PI * 2);
+            this.ctx.arc(end.x * this.scale, end.y * this.scale, 5, 0, Math.PI * 2);
             this.ctx.fill();
+            this.ctx.stroke();
         }
     }
     
