@@ -259,12 +259,40 @@ class CanvasRenderer {
             this.ctx.fillRect(frontX, frontY, 5, 20);
         }
         
+        // Draw direction arrow pointing from front of robot
+        this.drawDirectionArrow(rectX, rectW, alpha);
+        
         // Load robot image if URL provided
         if (robotConfig.imageUrl && robotConfig.imageUrl !== this.currentRobotUrl) {
             this.loadRobotImage(robotConfig.imageUrl);
         }
         
         this.ctx.restore();
+    }
+    
+    drawDirectionArrow(rectX, rectW, alpha) {
+        // Draw arrow extending from front of robot
+        const arrowStartX = rectX + rectW;
+        const arrowLength = 25; // Length of arrow in pixels
+        const arrowWidth = 8; // Width of arrowhead
+        
+        this.ctx.strokeStyle = `rgba(255, 193, 7, ${alpha * 0.7})`; // Amber color
+        this.ctx.fillStyle = `rgba(255, 193, 7, ${alpha * 0.7})`;
+        this.ctx.lineWidth = 2;
+        
+        // Draw arrow line
+        this.ctx.beginPath();
+        this.ctx.moveTo(arrowStartX, 0);
+        this.ctx.lineTo(arrowStartX + arrowLength, 0);
+        this.ctx.stroke();
+        
+        // Draw arrowhead
+        this.ctx.beginPath();
+        this.ctx.moveTo(arrowStartX + arrowLength, 0);
+        this.ctx.lineTo(arrowStartX + arrowLength - arrowWidth, -arrowWidth / 2);
+        this.ctx.lineTo(arrowStartX + arrowLength - arrowWidth, arrowWidth / 2);
+        this.ctx.closePath();
+        this.ctx.fill();
     }
     
     loadRobotImage(url) {
