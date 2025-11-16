@@ -68,7 +68,7 @@ class RobotConfig {
         
         if (config.length <= 0) errors.push('Robot length must be positive');
         if (config.width <= 0) errors.push('Robot width must be positive');
-        if (config.wheelOffset < 0) errors.push('Wheel offset cannot be negative');
+        if (config.wheelOffset < 0) errors.push('Wheel offset cannot be negative (tire overhang should be considered in robot length)');
         if (config.wheelCircumference <= 0) errors.push('Wheel circumference must be positive');
         if (config.wheelBase <= 0) errors.push('Wheel base must be positive');
         

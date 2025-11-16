@@ -208,7 +208,7 @@ class CanvasRenderer {
         // Rotate to robot angle
         this.ctx.rotate((angleDeg * Math.PI) / 180);
         
-        // Draw robot rectangle (centered on axle, which is wheelOffset from back)
+        // Draw robot rectangle (axle at origin, back is wheelOffset behind, front is (length - wheelOffset) ahead)
         const rectX = -(robotConfig.wheelOffset * this.scale);
         const rectY = -(robotConfig.width * this.scale) / 2;
         const rectW = robotConfig.length * this.scale;
@@ -232,7 +232,7 @@ class CanvasRenderer {
         // Rotate to robot angle
         this.ctx.rotate((angleDeg * Math.PI) / 180);
         
-        // Draw robot rectangle or image
+        // Draw robot rectangle or image (axle at origin)
         const rectX = -(robotConfig.wheelOffset * this.scale);
         const rectY = -(robotConfig.width * this.scale) / 2;
         const rectW = robotConfig.length * this.scale;
