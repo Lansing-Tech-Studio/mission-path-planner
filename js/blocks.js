@@ -110,7 +110,7 @@ class BlockManager {
             return false;
         }
         
-        if (degrees <= 0) {
+        if (degrees === 0) {
             return false;
         }
         
@@ -221,7 +221,6 @@ class BlockManager {
             const degreesInput = document.createElement('input');
             degreesInput.type = 'number';
             degreesInput.value = block.degrees || 360;
-            degreesInput.min = 0;
             degreesInput.step = 1;
             degreesInput.oninput = (e) => this.updateBlock(block.id, 'degrees', e.target.value);
             degreesGroup.appendChild(degreesLabel);
@@ -236,7 +235,7 @@ class BlockManager {
             helper.style.color = '#666';
             helper.style.fontSize = '10px';
             helper.style.marginTop = '4px';
-            helper.textContent = '0 = straight, negative = left, positive = right';
+            helper.textContent = '0 = straight, negative = left, positive = right. Negative degrees = backup';
             content.appendChild(helper);
         }
         
