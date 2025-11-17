@@ -28,13 +28,163 @@ class CanvasRenderer {
         this.robotImage = null;
         this.matAlignment = 'centered';
         
+        // Dragging state
+        this.isDragging = false;
+        this.isRotating = false;
+        this.dragOffsetX = 0;
+        this.dragOffsetY = 0;
+        this.rotationHandleRadius = 8; // pixels
+        
         this.initCanvas();
+        this.setupDragging();
     }
     
     initCanvas() {
         // Set canvas size based on table dimensions
         this.canvas.width = this.tableWidth * this.scale;
         this.canvas.height = this.tableHeight * this.scale;
+    }
+    
+    setupDragging() {
+        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        this.canvas.addEventListener('mouseup', () => this.onMouseUp());
+        this.canvas.addEventListener('mouseleave', () => this.onMouseUp());
+    }
+    
+    // Convert canvas pixels back to mat coordinates
+    canvasToCoordX(canvasX) {
+        const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
+        return (canvasX / this.scale - this.matOffsetX) / coordToVisualX;
+    }
+    
+    canvasToCoordY(canvasY) {
+        const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
+        return (canvasY / this.scale - this.matOffsetY) / coordToVisualY;
+    }
+    
+    isPointInRobot(x, y, robotConfig) {
+        // Check if point (x, y) in mat coordinates is inside the starting robot
+        const dx = x - robotConfig.startX;
+        const dy = y - robotConfig.startY;
+        
+        // Rotate point to robot's local coordinate system
+        const angleRad = (robotConfig.startAngle * Math.PI) / 180;
+        const localX = dx * Math.cos(-angleRad) - dy * Math.sin(-angleRad);
+        const localY = dx * Math.sin(-angleRad) + dy * Math.cos(-angleRad);
+        
+        // Check if within robot rectangle (axle at origin)
+        const halfWidth = robotConfig.width / 2;
+        const frontEdge = robotConfig.length - robotConfig.wheelOffset;
+        const backEdge = -robotConfig.wheelOffset;
+        
+        return localX >= backEdge && localX <= frontEdge && 
+               localY >= -halfWidth && localY <= halfWidth;
+    }
+    
+    getRotationHandlePosition(robotConfig) {
+        // Calculate rotation handle position (offset from robot center in front)
+        const angleRad = (robotConfig.startAngle * Math.PI) / 180;
+        const handleDistance = (robotConfig.length - robotConfig.wheelOffset + 15); // 15cm in front
+        
+        const handleX = robotConfig.startX + handleDistance * Math.cos(angleRad);
+        const handleY = robotConfig.startY + handleDistance * Math.sin(angleRad);
+        
+        return { x: handleX, y: handleY };
+    }
+    
+    isPointInRotationHandle(x, y, robotConfig) {
+        const handle = this.getRotationHandlePosition(robotConfig);
+        const dx = x - handle.x;
+        const dy = y - handle.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Convert pixel radius to coordinate space
+        const coordRadius = this.rotationHandleRadius / this.getCoordScaleX();
+        return distance <= coordRadius;
+    }
+    
+    onMouseDown(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
+        
+        const matX = this.canvasToCoordX(canvasX);
+        const matY = this.canvasToCoordY(canvasY);
+        
+        if (!this.robotConfig) return;
+        
+        // Check if clicking on rotation handle first (higher priority)
+        if (this.isPointInRotationHandle(matX, matY, this.robotConfig)) {
+            this.isRotating = true;
+            this.canvas.style.cursor = 'grabbing';
+        }
+        // Check if clicking on the starting robot
+        else if (this.isPointInRobot(matX, matY, this.robotConfig)) {
+            this.isDragging = true;
+            this.dragOffsetX = matX - this.robotConfig.startX;
+            this.dragOffsetY = matY - this.robotConfig.startY;
+            this.canvas.style.cursor = 'grabbing';
+        }
+    }
+    
+    onMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
+        
+        const matX = this.canvasToCoordX(canvasX);
+        const matY = this.canvasToCoordY(canvasY);
+        
+        if (this.isRotating && this.robotConfig) {
+            // Calculate angle from robot center to mouse
+            const dx = matX - this.robotConfig.startX;
+            const dy = matY - this.robotConfig.startY;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            // Snap to 15 degree increments
+            const snappedAngle = Math.round(angle / 15) * 15;
+            
+            // Update form input
+            document.getElementById('startAngle').value = snappedAngle;
+            
+            // Trigger update
+            if (window.missionPlanner) {
+                window.missionPlanner.update();
+            }
+        } else if (this.isDragging && this.robotConfig) {
+            // Update robot position
+            const newX = matX - this.dragOffsetX;
+            const newY = matY - this.dragOffsetY;
+            
+            // Clamp to mat bounds
+            const clampedX = Math.max(0, Math.min(this.matCoordWidth, newX));
+            const clampedY = Math.max(0, Math.min(this.matCoordHeight, newY));
+            
+            // Update form inputs
+            document.getElementById('startX').value = clampedX.toFixed(1);
+            document.getElementById('startY').value = clampedY.toFixed(1);
+            
+            // Trigger update
+            if (window.missionPlanner) {
+                window.missionPlanner.update();
+            }
+        } else if (this.robotConfig) {
+            // Update cursor based on hover state
+            if (this.isPointInRotationHandle(matX, matY, this.robotConfig)) {
+                this.canvas.style.cursor = 'grab';
+            } else if (this.isPointInRobot(matX, matY, this.robotConfig)) {
+                this.canvas.style.cursor = 'grab';
+            } else {
+                this.canvas.style.cursor = 'default';
+            }
+        }
+    }
+    
+    onMouseUp() {
+        this.isDragging = false;
+        this.isRotating = false;
+        this.canvas.style.cursor = 'default';
     }
     
     updateMatAlignment(alignment) {
@@ -75,6 +225,9 @@ class CanvasRenderer {
     }
     
     render(matUrl, robotConfig, path) {
+        // Store robot config for drag detection
+        this.robotConfig = robotConfig;
+        
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
@@ -429,6 +582,11 @@ class CanvasRenderer {
         // Draw direction arrow pointing from front of robot
         this.drawDirectionArrow(rectX, rectW, alpha);
         
+        // Draw rotation handle for starting robot (full opacity)
+        if (alpha === 1.0) {
+            this.drawRotationHandle(rectX, rectW);
+        }
+        
         // Load robot image if URL provided
         if (robotConfig.imageUrl && robotConfig.imageUrl !== this.currentRobotUrl) {
             this.loadRobotImage(robotConfig.imageUrl);
@@ -458,6 +616,46 @@ class CanvasRenderer {
         this.ctx.moveTo(arrowStartX + arrowLength, 0);
         this.ctx.lineTo(arrowStartX + arrowLength - arrowWidth, -arrowWidth / 2);
         this.ctx.lineTo(arrowStartX + arrowLength - arrowWidth, arrowWidth / 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+    
+    drawRotationHandle(rectX, rectW) {
+        // Draw rotation handle beyond the arrow
+        const handleX = rectX + rectW + 45; // Beyond arrow (25 + 20)
+        
+        // Draw connecting line
+        this.ctx.strokeStyle = '#FF5722'; // Deep orange
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([3, 3]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(rectX + rectW + 25, 0);
+        this.ctx.lineTo(handleX, 0);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        
+        // Draw circular handle
+        this.ctx.fillStyle = '#FF5722';
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(handleX, 0, this.rotationHandleRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // Draw rotation arrows inside circle
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        // Draw curved arrow (partial circle with arrowhead)
+        this.ctx.arc(handleX, 0, 4, -0.3, Math.PI * 1.3);
+        this.ctx.stroke();
+        // Small arrowhead
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.moveTo(handleX - 3.5, -2);
+        this.ctx.lineTo(handleX - 3.5, 2);
+        this.ctx.lineTo(handleX - 1, 0);
         this.ctx.closePath();
         this.ctx.fill();
     }
