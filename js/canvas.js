@@ -44,7 +44,12 @@ class CanvasRenderer {
             this.drawRobot(robotConfig, lastPoint.x, lastPoint.y, lastPoint.angle, 0.5);
         }
         
-        // Draw path dots and markers on top of robots
+        // Draw wheel paths on top of robots
+        if (path && path.points && path.points.length > 0) {
+            this.drawWheelPaths(path);
+        }
+        
+        // Draw path dots and markers on top of everything
         if (path && path.points && path.points.length > 0) {
             this.drawPathMarkers(path);
         }
@@ -115,7 +120,7 @@ class CanvasRenderer {
     drawPathBodyAndLine(path, robotConfig) {
         if (!path.points || path.points.length === 0) return;
         
-        // Draw robot body outline along path (lighter, wider)
+        // Draw robot body outline along path (lighter, wider) - first layer
         this.ctx.fillStyle = 'rgba(76, 175, 80, 0.12)';
         this.ctx.strokeStyle = 'rgba(76, 175, 80, 0.25)';
         this.ctx.lineWidth = 1;
@@ -125,7 +130,7 @@ class CanvasRenderer {
             this.drawRobotOutline(robotConfig, point.x, point.y, point.angle);
         }
         
-        // Draw center path line (darker, thinner)
+        // Draw center path line (darker, thinner) - second layer
         this.ctx.strokeStyle = '#2E7D32';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
@@ -143,6 +148,82 @@ class CanvasRenderer {
         }
         
         this.ctx.stroke();
+    }
+    
+    drawWheelPaths(path) {
+        if (!path.points || path.points.length === 0) return;
+        
+        console.log('drawWheelPaths called with', path.points.length, 'points');
+        
+        // Draw left wheel path (blue)
+        if (path.points[0].leftWheelX !== undefined) {
+            console.log('Drawing left wheel path - color: #2196F3, width: 2');
+            console.log('First left wheel point:', path.points[0].leftWheelX, path.points[0].leftWheelY);
+            console.log('First left screen coords:', path.points[0].leftWheelX * this.scale, path.points[0].leftWheelY * this.scale);
+            
+            this.ctx.save();
+            this.ctx.strokeStyle = '#1976D2';
+            this.ctx.lineWidth = 2.5;
+            this.ctx.globalAlpha = 1.0;
+            this.ctx.shadowColor = 'rgba(25, 118, 210, 0.5)';
+            this.ctx.shadowBlur = 2;
+            this.ctx.beginPath();
+            
+            for (let i = 0; i < path.points.length; i++) {
+                const point = path.points[i];
+                if (point.leftWheelX !== undefined && point.leftWheelY !== undefined) {
+                    const screenX = point.leftWheelX * this.scale;
+                    const screenY = point.leftWheelY * this.scale;
+                    
+                    if (i === 0) {
+                        this.ctx.moveTo(screenX, screenY);
+                    } else {
+                        this.ctx.lineTo(screenX, screenY);
+                    }
+                }
+            }
+            
+            this.ctx.stroke();
+            this.ctx.restore();
+            console.log('Left wheel path drawn');
+        } else {
+            console.log('No left wheel coordinates in path points');
+        }
+        
+        // Draw right wheel path (orange)
+        if (path.points[0].rightWheelX !== undefined) {
+            console.log('Drawing right wheel path - color: #FF9800, width: 2');
+            console.log('First right wheel point:', path.points[0].rightWheelX, path.points[0].rightWheelY);
+            console.log('First right screen coords:', path.points[0].rightWheelX * this.scale, path.points[0].rightWheelY * this.scale);
+            
+            this.ctx.save();
+            this.ctx.strokeStyle = '#F57C00';
+            this.ctx.lineWidth = 2.5;
+            this.ctx.globalAlpha = 1.0;
+            this.ctx.shadowColor = 'rgba(245, 124, 0, 0.5)';
+            this.ctx.shadowBlur = 2;
+            this.ctx.beginPath();
+            
+            for (let i = 0; i < path.points.length; i++) {
+                const point = path.points[i];
+                if (point.rightWheelX !== undefined && point.rightWheelY !== undefined) {
+                    const screenX = point.rightWheelX * this.scale;
+                    const screenY = point.rightWheelY * this.scale;
+                    
+                    if (i === 0) {
+                        this.ctx.moveTo(screenX, screenY);
+                    } else {
+                        this.ctx.lineTo(screenX, screenY);
+                    }
+                }
+            }
+            
+            this.ctx.stroke();
+            this.ctx.restore();
+            console.log('Right wheel path drawn');
+        } else {
+            console.log('No right wheel coordinates in path points');
+        }
     }
     
     drawPathMarkers(path) {

@@ -14,11 +14,20 @@ class PathCalculator {
         let y = robotConfig.startY;
         let angle = robotConfig.startAngle;
         
+        // Calculate initial wheel positions
+        const angleRad = (angle * Math.PI) / 180;
+        const perpAngleRad = angleRad + Math.PI / 2;
+        const halfWheelBase = robotConfig.wheelBase / 2;
+        
         const points = [{
             x: x,
             y: y,
             angle: angle,
-            segmentEnd: false
+            segmentEnd: false,
+            leftWheelX: x + halfWheelBase * Math.cos(perpAngleRad),
+            leftWheelY: y + halfWheelBase * Math.sin(perpAngleRad),
+            rightWheelX: x - halfWheelBase * Math.cos(perpAngleRad),
+            rightWheelY: y - halfWheelBase * Math.sin(perpAngleRad)
         }];
         
         let allValid = true;
@@ -105,10 +114,18 @@ class PathCalculator {
             const x = startX + distance * Math.cos(angleRad);
             const y = startY + distance * Math.sin(angleRad);
             
+            // Calculate wheel positions for visualization
+            const perpAngleRad = angleRad + Math.PI / 2;
+            const halfWheelBase = robotConfig.wheelBase / 2;
+            
             points.push({
                 x: x,
                 y: y,
-                angle: startAngle
+                angle: startAngle,
+                leftWheelX: x + halfWheelBase * Math.cos(perpAngleRad),
+                leftWheelY: y + halfWheelBase * Math.sin(perpAngleRad),
+                rightWheelX: x - halfWheelBase * Math.cos(perpAngleRad),
+                rightWheelY: y - halfWheelBase * Math.sin(perpAngleRad)
             });
         }
         
@@ -116,6 +133,7 @@ class PathCalculator {
     }
     
     calculateArcMove(startX, startY, startAngle, direction, degrees, robotConfig) {
+        direction = -direction; // Invert direction to match expected behavior
         const points = [];
         
         // Spike Prime movement behavior:
@@ -135,23 +153,12 @@ class PathCalculator {
             // Turning right: left motor is faster, right motor is slower
             leftWheelDegrees = degrees;
             const reductionFactor = (100 - direction * 2) / 100;
-            rightWheelDegrees = degrees * Math.max(0, reductionFactor); // Ensure non-negative
+            rightWheelDegrees = degrees * reductionFactor; // Can be negative for sharp turns (>50)
         } else {
             // Turning left: right motor is faster, left motor is slower
             rightWheelDegrees = degrees;
             const reductionFactor = (100 - Math.abs(direction) * 2) / 100;
-            leftWheelDegrees = degrees * Math.max(0, reductionFactor); // Ensure non-negative
-        }
-        
-        // Handle special cases where one motor goes backwards (direction >= 50 or <= -50)
-        if (direction >= 50) {
-            // Right motor reverses
-            const reductionFactor = (100 - direction * 2) / 100;
-            rightWheelDegrees = degrees * reductionFactor; // Will be negative
-        } else if (direction <= -50) {
-            // Left motor reverses
-            const reductionFactor = (100 - Math.abs(direction) * 2) / 100;
-            leftWheelDegrees = degrees * reductionFactor; // Will be negative
+            leftWheelDegrees = degrees * reductionFactor; // Can be negative for sharp turns (<-50)
         }
         
         // Convert wheel rotations to distances
@@ -160,71 +167,93 @@ class PathCalculator {
         
         // Calculate angular change using differential drive kinematics
         // deltaAngle = (rightDist - leftDist) / wheelBase
-        const deltaAngleCm = rightWheelDist - leftWheelDist;
-        const deltaAngle = (deltaAngleCm / robotConfig.wheelBase) * (180 / Math.PI);
+        const deltaAngle = ((rightWheelDist - leftWheelDist) / robotConfig.wheelBase) * (180 / Math.PI);
         
-        // Calculate the average distance traveled (center of robot)
-        const avgDistance = (leftWheelDist + rightWheelDist) / 2;
-        
-        // Generate points along the arc
+        // Generate points along the path using proper differential drive kinematics
         const numSteps = Math.max(2, Math.ceil(Math.abs(degrees) / 5));
         
-        if (Math.abs(deltaAngle) < 0.01) {
-            // Essentially straight (shouldn't happen but handle gracefully)
-            for (let i = 0; i <= numSteps; i++) {
-                const t = i / numSteps;
-                const distance = avgDistance * t;
-                
-                const angleRad = (startAngle * Math.PI) / 180;
-                const x = startX + distance * Math.cos(angleRad);
-                const y = startY + distance * Math.sin(angleRad);
-                
-                points.push({
-                    x: x,
-                    y: y,
-                    angle: startAngle
-                });
-            }
-        } else if (Math.abs(leftWheelDist + rightWheelDist) < 0.01) {
+        if (Math.abs(leftWheelDist + rightWheelDist) < 0.01) {
             // Turning in place (both wheels move equal distances in opposite directions)
             for (let i = 0; i <= numSteps; i++) {
                 const t = i / numSteps;
+                const angle = startAngle + deltaAngle * t;
+                
+                // Calculate wheel positions for visualization
+                const angleRad = (angle * Math.PI) / 180;
+                const perpAngleRad = angleRad + Math.PI / 2;
+                const halfWheelBase = robotConfig.wheelBase / 2;
+                
                 points.push({
                     x: startX,
                     y: startY,
-                    angle: startAngle + deltaAngle * t
+                    angle: angle,
+                    leftWheelX: startX + halfWheelBase * Math.cos(perpAngleRad),
+                    leftWheelY: startY + halfWheelBase * Math.sin(perpAngleRad),
+                    rightWheelX: startX - halfWheelBase * Math.cos(perpAngleRad),
+                    rightWheelY: startY - halfWheelBase * Math.sin(perpAngleRad)
                 });
             }
         } else {
-            // Moving in an arc
-            // Calculate turn radius: R = avgDistance / deltaAngleRadians
-            const deltaAngleRad = (deltaAngle * Math.PI) / 180;
-            const turnRadius = Math.abs(avgDistance / deltaAngleRad);
+            // Moving in an arc or straight
+            // Use incremental simulation for accurate path tracking
+            let currentX = startX;
+            let currentY = startY;
+            let currentAngle = startAngle;
             
-            // Calculate center of turn circle
-            // The center is perpendicular to the starting direction
-            const perpAngle = startAngle + (deltaAngle > 0 ? -90 : 90);
-            const perpAngleRad = (perpAngle * Math.PI) / 180;
-            const centerX = startX + turnRadius * Math.cos(perpAngleRad);
-            const centerY = startY + turnRadius * Math.sin(perpAngleRad);
-            
-            // Generate points along the arc
             for (let i = 0; i <= numSteps; i++) {
                 const t = i / numSteps;
-                const currentAngle = startAngle + deltaAngle * t;
                 
-                // Calculate position on arc relative to center
-                const angleFromCenter = perpAngle + 180 + (deltaAngle > 0 ? deltaAngle * t : -deltaAngle * t);
-                const angleFromCenterRad = (angleFromCenter * Math.PI) / 180;
+                // Calculate incremental wheel movements
+                const leftDist = leftWheelDist * t;
+                const rightDist = rightWheelDist * t;
                 
-                const x = centerX + turnRadius * Math.cos(angleFromCenterRad);
-                const y = centerY + turnRadius * Math.sin(angleFromCenterRad);
+                if (i > 0) {
+                    const prevT = (i - 1) / numSteps;
+                    const prevLeftDist = leftWheelDist * prevT;
+                    const prevRightDist = rightWheelDist * prevT;
+                    
+                    const deltaLeft = leftDist - prevLeftDist;
+                    const deltaRight = rightDist - prevRightDist;
+                    
+                    // Calculate change in angle
+                    const deltaTheta = (deltaRight - deltaLeft) / robotConfig.wheelBase;
+                    
+                    // Calculate change in position (using average distance and current angle)
+                    const deltaDistance = (deltaLeft + deltaRight) / 2;
+                    const currentAngleRad = (currentAngle * Math.PI) / 180;
+                    
+                    currentX += deltaDistance * Math.cos(currentAngleRad);
+                    currentY += deltaDistance * Math.sin(currentAngleRad);
+                    currentAngle += deltaTheta * (180 / Math.PI);
+                }
+                
+                // Calculate wheel positions for visualization
+                const angleRad = (currentAngle * Math.PI) / 180;
+                const perpAngleRad = angleRad + Math.PI / 2;
+                const halfWheelBase = robotConfig.wheelBase / 2;
+                
+                const leftWheelX = currentX + halfWheelBase * Math.cos(perpAngleRad);
+                const leftWheelY = currentY + halfWheelBase * Math.sin(perpAngleRad);
+                const rightWheelX = currentX - halfWheelBase * Math.cos(perpAngleRad);
+                const rightWheelY = currentY - halfWheelBase * Math.sin(perpAngleRad);
                 
                 points.push({
-                    x: x,
-                    y: y,
-                    angle: currentAngle
+                    x: currentX,
+                    y: currentY,
+                    angle: currentAngle,
+                    leftWheelX: leftWheelX,
+                    leftWheelY: leftWheelY,
+                    rightWheelX: rightWheelX,
+                    rightWheelY: rightWheelY
                 });
+                
+                // Debug: log first and last points
+                if (i === 0 || i === numSteps) {
+                    console.log(`Step ${i}: center=(${currentX.toFixed(2)}, ${currentY.toFixed(2)}), ` +
+                        `left=(${leftWheelX.toFixed(2)}, ${leftWheelY.toFixed(2)}), ` +
+                        `right=(${rightWheelX.toFixed(2)}, ${rightWheelY.toFixed(2)}), ` +
+                        `angle=${currentAngle.toFixed(2)}`);
+                }
             }
         }
         
