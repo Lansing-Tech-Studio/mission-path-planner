@@ -116,6 +116,7 @@ class MissionPlanner {
         // Preset mat URLs (these would be actual image URLs in production)
         const matUrls = {
             'blank': '',
+            '2025-unearthed': 'img/2025-unearthed.jpeg',
             '2024-submerged': 'https://firstinspiresst01.blob.core.windows.net/first-energize/fll-challenge/fll-challenge-2024-25-submerged-game-model.jpg',
             '2023-masterpiece': 'https://firstinspiresst01.blob.core.windows.net/first-energize/fll-challenge/fll-challenge-rgb-field-2022-2023.jpg'
         };
