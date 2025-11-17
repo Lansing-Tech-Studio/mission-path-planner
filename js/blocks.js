@@ -4,6 +4,9 @@ class BlockManager {
         this.blocks = [];
         this.container = document.getElementById('programBlocks');
         this.nextId = 1;
+        this.draggedBlock = null;
+        this.draggedElement = null;
+        this.placeholder = null;
     }
     
     addTextBlock() {
@@ -42,28 +45,92 @@ class BlockManager {
         }
     }
     
-    moveBlockUp(id) {
-        const index = this.blocks.findIndex(b => b.id === id);
-        if (index > 0) {
-            [this.blocks[index - 1], this.blocks[index]] = [this.blocks[index], this.blocks[index - 1]];
-            this.renderBlocks();
-            
-            if (window.missionPlanner) {
-                window.missionPlanner.update();
-            }
+    moveBlock(fromIndex, toIndex) {
+        if (fromIndex === toIndex || toIndex < 0 || toIndex >= this.blocks.length) {
+            return;
+        }
+        
+        const [block] = this.blocks.splice(fromIndex, 1);
+        this.blocks.splice(toIndex, 0, block);
+        this.renderBlocks();
+        
+        if (window.missionPlanner) {
+            window.missionPlanner.update();
         }
     }
     
-    moveBlockDown(id) {
-        const index = this.blocks.findIndex(b => b.id === id);
-        if (index < this.blocks.length - 1) {
-            [this.blocks[index], this.blocks[index + 1]] = [this.blocks[index + 1], this.blocks[index]];
-            this.renderBlocks();
+    handleDragStart(e, blockId) {
+        this.draggedBlock = this.blocks.find(b => b.id === blockId);
+        this.draggedElement = e.currentTarget;
+        
+        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+        
+        // Create placeholder
+        this.placeholder = document.createElement('div');
+        this.placeholder.className = 'block-placeholder';
+        this.placeholder.style.height = e.currentTarget.offsetHeight + 'px';
+    }
+    
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        const afterElement = this.getDragAfterElement(e.clientY);
+        
+        if (afterElement == null) {
+            this.container.appendChild(this.placeholder);
+        } else {
+            this.container.insertBefore(this.placeholder, afterElement);
+        }
+    }
+    
+    handleDragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+        
+        // Check if dragged outside container
+        const rect = this.container.getBoundingClientRect();
+        const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
+                         e.clientY < rect.top || e.clientY > rect.bottom;
+        
+        if (isOutside && this.draggedBlock) {
+            // Remove block if dragged outside
+            this.removeBlock(this.draggedBlock.id);
+        } else if (this.placeholder && this.placeholder.parentNode && this.draggedBlock) {
+            // Reorder blocks based on placeholder position
+            const placeholderIndex = Array.from(this.container.children).indexOf(this.placeholder);
+            const draggedIndex = this.blocks.findIndex(b => b.id === this.draggedBlock.id);
             
-            if (window.missionPlanner) {
-                window.missionPlanner.update();
+            if (placeholderIndex !== -1 && draggedIndex !== -1) {
+                // Adjust index if dragging down
+                const targetIndex = placeholderIndex > draggedIndex ? placeholderIndex - 1 : placeholderIndex;
+                this.moveBlock(draggedIndex, targetIndex);
             }
         }
+        
+        // Clean up
+        if (this.placeholder && this.placeholder.parentNode) {
+            this.placeholder.parentNode.removeChild(this.placeholder);
+        }
+        this.draggedBlock = null;
+        this.draggedElement = null;
+        this.placeholder = null;
+    }
+    
+    getDragAfterElement(y) {
+        const draggableElements = [...this.container.querySelectorAll('.program-block:not(.dragging)')];
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
     
     updateBlock(id, field, value) {
@@ -182,6 +249,9 @@ class BlockManager {
     renderBlocks() {
         this.container.innerHTML = '';
         
+        // Add drag over listener to container
+        this.container.ondragover = (e) => this.handleDragOver(e);
+        
         if (this.blocks.length === 0) {
             this.container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No blocks added yet. Click "Add Text Block" or "Add Move Block" to get started.</p>';
             return;
@@ -197,54 +267,34 @@ class BlockManager {
         const div = document.createElement('div');
         div.className = `program-block ${block.type}-block`;
         div.dataset.blockId = block.id;
+        div.draggable = true;
         
         if (block.type === 'move' && block.valid === false) {
             div.classList.add('invalid');
         }
         
-        // Block header with type and controls
+        // Add drag event listeners
+        div.addEventListener('dragstart', (e) => this.handleDragStart(e, block.id));
+        div.addEventListener('dragend', (e) => this.handleDragEnd(e));
+        
+        // Block header with type and drag handle
         const header = document.createElement('div');
         header.className = 'block-header';
+        
+        const dragHandle = document.createElement('span');
+        dragHandle.className = 'drag-handle';
+        dragHandle.textContent = '⋮⋮';
+        dragHandle.style.cursor = 'grab';
+        dragHandle.style.marginRight = '8px';
+        dragHandle.style.color = '#999';
+        dragHandle.style.userSelect = 'none';
+        header.appendChild(dragHandle);
         
         const typeLabel = document.createElement('span');
         typeLabel.className = 'block-type';
         typeLabel.textContent = block.type === 'text' ? 'Text/Comment' : 'Move';
         header.appendChild(typeLabel);
         
-        const controls = document.createElement('div');
-        controls.style.display = 'flex';
-        controls.style.gap = '4px';
-        
-        // Up button
-        if (index > 0) {
-            const upBtn = document.createElement('button');
-            upBtn.textContent = '▲';
-            upBtn.className = 'btn btn-secondary';
-            upBtn.style.padding = '2px 8px';
-            upBtn.style.fontSize = '10px';
-            upBtn.onclick = () => this.moveBlockUp(block.id);
-            controls.appendChild(upBtn);
-        }
-        
-        // Down button
-        if (index < this.blocks.length - 1) {
-            const downBtn = document.createElement('button');
-            downBtn.textContent = '▼';
-            downBtn.className = 'btn btn-secondary';
-            downBtn.style.padding = '2px 8px';
-            downBtn.style.fontSize = '10px';
-            downBtn.onclick = () => this.moveBlockDown(block.id);
-            controls.appendChild(downBtn);
-        }
-        
-        // Delete button
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '✕';
-        deleteBtn.className = 'btn btn-danger';
-        deleteBtn.onclick = () => this.removeBlock(block.id);
-        controls.appendChild(deleteBtn);
-        
-        header.appendChild(controls);
         div.appendChild(header);
         
         // Block content

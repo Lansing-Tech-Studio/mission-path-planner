@@ -305,6 +305,18 @@ body {
     background-color: #ffebee;
 }
 
+.program-block.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.block-placeholder {
+    background-color: #e3f2fd;
+    border: 2px dashed #2196F3;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
 .block-header {
     display: flex;
     justify-content: space-between;
