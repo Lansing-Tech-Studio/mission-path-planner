@@ -27,10 +27,6 @@
                             <label for="teamLogo">Team Logo URL (optional):</label>
                             <input type="url" id="teamLogo" value="https://lansingtechstudio.org/assets/images/logo.png" placeholder="https://...">
                         </div>
-                        <div class="form-group">
-                            <label for="description">Description (optional):</label>
-                            <textarea id="description" rows="3" placeholder="Project description..."></textarea>
-                        </div>
                         </div>
                     </section>
 
@@ -156,6 +152,10 @@
 
         <!-- Right Panel: Canvas (75%) -->
         <div class="right-panel">
+            <div class="canvas-description">
+                <label for="description">Description (optional):</label>
+                <textarea id="description" rows="2" placeholder="Plan description..."></textarea>
+            </div>
             <canvas id="missionCanvas"></canvas>
         </div>
     </div>

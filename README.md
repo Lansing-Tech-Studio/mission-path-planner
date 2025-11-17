@@ -16,7 +16,7 @@ A web-based application for planning and visualizing robot paths for FIRST LEGO 
 
 ### 1. Team Information
 
-- Enter your team name, logo URL (optional), and project description
+- Enter your team name, logo URL (optional), and plan description
 - This information will appear on printed plans
 
 ### 2. Select Mission Mat

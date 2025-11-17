@@ -380,10 +380,41 @@ body {
     width: 75%;
     background-color: #e8e8e8;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     padding: 20px;
     overflow: hidden;
+}
+
+.canvas-description {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+    flex-shrink: 0;
+}
+
+.canvas-description label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.canvas-description textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.canvas-description textarea:focus {
+    outline: none;
+    border-color: #4CAF50;
 }
 
 #missionCanvas {
@@ -392,6 +423,9 @@ body {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+    flex: 1;
+    display: block;
+    margin: auto;
 }
 
 /* Print Styles */
