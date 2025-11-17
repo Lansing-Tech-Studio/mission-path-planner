@@ -61,6 +61,12 @@ class MissionPlanner {
         
         customMatUrl.addEventListener('input', () => this.update());
         
+        // Mat alignment
+        const matAlignment = document.getElementById('matAlignment');
+        if (matAlignment) {
+            matAlignment.addEventListener('change', () => this.update());
+        }
+        
         // Block management
         document.getElementById('addTextBlock').addEventListener('click', () => {
             this.blocks.addTextBlock();
@@ -99,6 +105,10 @@ class MissionPlanner {
         const matUrl = this.getMatUrl();
         const program = this.blocks.getProgram();
         
+        // Update mat alignment
+        const matAlignment = document.getElementById('matAlignment').value || 'centered';
+        this.canvas.updateMatAlignment(matAlignment);
+        
         // Calculate path
         const path = this.pathCalculator.calculatePath(program, robotConfig);
         
@@ -117,8 +127,8 @@ class MissionPlanner {
         const matUrls = {
             'blank': '',
             '2025-unearthed': 'img/2025-unearthed.jpeg',
-            '2024-submerged': 'https://firstinspiresst01.blob.core.windows.net/first-energize/fll-challenge/fll-challenge-2024-25-submerged-game-model.jpg',
-            '2023-masterpiece': 'https://firstinspiresst01.blob.core.windows.net/first-energize/fll-challenge/fll-challenge-rgb-field-2022-2023.jpg'
+            '2024-submerged': 'img/2024-submerged.jpeg',
+            '2023-masterpiece': 'img/2023-masterpiece.jpeg'
         };
         
         return matUrls[matSelect] || '';
@@ -133,7 +143,8 @@ class MissionPlanner {
             },
             mat: {
                 selected: document.getElementById('matSelect').value,
-                customUrl: document.getElementById('customMatUrl').value
+                customUrl: document.getElementById('customMatUrl').value,
+                alignment: document.getElementById('matAlignment').value
             },
             robot: this.robot.getConfig(),
             program: this.blocks.getProgram(),
@@ -151,6 +162,7 @@ class MissionPlanner {
         if (data.mat) {
             document.getElementById('matSelect').value = data.mat.selected || 'blank';
             document.getElementById('customMatUrl').value = data.mat.customUrl || '';
+            document.getElementById('matAlignment').value = data.mat.alignment || 'centered';
             
             if (data.mat.selected === 'custom') {
                 document.getElementById('customMatUrlGroup').style.display = 'block';
