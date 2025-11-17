@@ -9,8 +9,8 @@ class RobotConfig {
             wheelBase: 12,
             imageUrl: '',
             startX: 30,
-            startY: 114,
-            startAngle: 270
+            startY: 6,
+            startAngle: 0
         };
     }
     

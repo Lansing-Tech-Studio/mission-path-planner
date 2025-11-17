@@ -15,7 +15,8 @@ class PathCalculator {
         let angle = robotConfig.startAngle;
         
         // Calculate initial wheel positions
-        const angleRad = (angle * Math.PI) / 180;
+        // Add 90° so that 0° points up instead of right
+        const angleRad = ((angle + 90) * Math.PI) / 180;
         const perpAngleRad = angleRad + Math.PI / 2;
         const halfWheelBase = robotConfig.wheelBase / 2;
         
@@ -110,8 +111,10 @@ class PathCalculator {
             const distance = distanceCm * t;
             
             // Calculate position
-            const angleRad = (startAngle * Math.PI) / 180;
+            // Add 90° so that 0° points up instead of right
+            const angleRad = ((startAngle + 90) * Math.PI) / 180;
             const x = startX + distance * Math.cos(angleRad);
+            // Y-axis increases upward, use standard mathematical convention
             const y = startY + distance * Math.sin(angleRad);
             
             // Calculate wheel positions for visualization
@@ -133,7 +136,6 @@ class PathCalculator {
     }
     
     calculateArcMove(startX, startY, startAngle, direction, degrees, robotConfig) {
-        direction = -direction; // Invert direction to match expected behavior
         const points = [];
         
         // Spike Prime movement behavior:
@@ -179,7 +181,8 @@ class PathCalculator {
                 const angle = startAngle + deltaAngle * t;
                 
                 // Calculate wheel positions for visualization
-                const angleRad = (angle * Math.PI) / 180;
+                // Add 90° so that 0° points up instead of right
+                const angleRad = ((angle + 90) * Math.PI) / 180;
                 const perpAngleRad = angleRad + Math.PI / 2;
                 const halfWheelBase = robotConfig.wheelBase / 2;
                 
@@ -220,15 +223,18 @@ class PathCalculator {
                     
                     // Calculate change in position (using average distance and current angle)
                     const deltaDistance = (deltaLeft + deltaRight) / 2;
-                    const currentAngleRad = (currentAngle * Math.PI) / 180;
+                    // Add 90° so that 0° points up instead of right
+                    const currentAngleRad = ((currentAngle + 90) * Math.PI) / 180;
                     
                     currentX += deltaDistance * Math.cos(currentAngleRad);
+                    // Y-axis increases upward, use standard mathematical convention
                     currentY += deltaDistance * Math.sin(currentAngleRad);
                     currentAngle += deltaTheta * (180 / Math.PI);
                 }
                 
                 // Calculate wheel positions for visualization
-                const angleRad = (currentAngle * Math.PI) / 180;
+                // Add 90° so that 0° points up instead of right
+                const angleRad = ((currentAngle + 90) * Math.PI) / 180;
                 const perpAngleRad = angleRad + Math.PI / 2;
                 const halfWheelBase = robotConfig.wheelBase / 2;
                 

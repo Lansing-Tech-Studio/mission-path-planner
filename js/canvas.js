@@ -94,7 +94,8 @@ class CanvasRenderer {
     
     canvasToCoordY(canvasY) {
         const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
-        return (canvasY / this.scale - this.matOffsetY) / coordToVisualY;
+        // Flip Y-axis: canvas Y increases downward, but coord Y increases upward from bottom
+        return this.matCoordHeight - ((canvasY / this.scale - this.matOffsetY) / coordToVisualY);
     }
     
     isPointInRobot(x, y, robotConfig) {
@@ -102,9 +103,11 @@ class CanvasRenderer {
         const dy = y - robotConfig.startY;
         
         // Rotate point to robot's local coordinate system
-        const angleRad = (robotConfig.startAngle * Math.PI) / 180;
-        const localX = dx * Math.cos(-angleRad) - dy * Math.sin(-angleRad);
-        const localY = dx * Math.sin(-angleRad) + dy * Math.cos(-angleRad);
+        // Use negative angle for inverse rotation (world to local)
+        // Add 90° so that 0° points up instead of right
+        const angleRad = -((robotConfig.startAngle + 90) * Math.PI) / 180;
+        const localX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+        const localY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
         
         // Check if within robot rectangle (axle at origin)
         const halfWidth = robotConfig.width / 2;
@@ -117,7 +120,8 @@ class CanvasRenderer {
     
     getRotationHandlePosition(robotConfig) {
         // Calculate rotation handle position in mat coordinates
-        const angleRad = (robotConfig.startAngle * Math.PI) / 180;
+        // Add 90° so that 0° points up instead of right
+        const angleRad = ((robotConfig.startAngle + 90) * Math.PI) / 180;
         
         // In drawing: handle is at (rectX + rectW + handleDistance) where:
         // - rectX + rectW = (length - wheelOffset) * scaleX pixels from robot center
@@ -132,6 +136,7 @@ class CanvasRenderer {
         const totalDistanceCm = frontOfRobotCm + handleOffsetCm;
         
         const handleX = robotConfig.startX + totalDistanceCm * Math.cos(angleRad);
+        // Y-axis increases upward, so use standard mathematical convention
         const handleY = robotConfig.startY + totalDistanceCm * Math.sin(angleRad);
         
         return { x: handleX, y: handleY };
@@ -194,7 +199,9 @@ class CanvasRenderer {
             // Calculate angle from robot center to mouse
             const dx = matX - this.robotConfig.startX;
             const dy = matY - this.robotConfig.startY;
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            // Y-axis increases upward, use standard mathematical convention
+            // Subtract 90° so that 0° points up instead of right
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
             
             // Snap to 15 degree increments
             const snappedAngle = Math.round(angle / 15) * 15;
@@ -266,7 +273,8 @@ class CanvasRenderer {
     
     coordToCanvasY(y) {
         const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
-        return (this.matOffsetY + y * coordToVisualY) * this.scale;
+        // Flip Y-axis: coord Y=0 is at bottom, canvas Y=0 is at top
+        return (this.matOffsetY + (this.matCoordHeight - y) * coordToVisualY) * this.scale;
     }
     
     // Get scale factor for converting coordinate space dimensions to canvas pixels
@@ -575,8 +583,9 @@ class CanvasRenderer {
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
         
-        // Rotate to robot angle
-        this.ctx.rotate((angleDeg * Math.PI) / 180);
+        // Rotate to robot angle (negate because Y-axis is flipped)
+        // Add 90° so that 0° points up instead of right
+        this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
         
         // Draw robot rectangle (axle at origin, back is wheelOffset behind, front is (length - wheelOffset) ahead)
         const scaleX = this.getCoordScaleX();
@@ -601,8 +610,9 @@ class CanvasRenderer {
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
         
-        // Rotate to robot angle
-        this.ctx.rotate((angleDeg * Math.PI) / 180);
+        // Rotate to robot angle (negate because Y-axis is flipped)
+        // Add 90° so that 0° points up instead of right
+        this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
         
         // Draw robot rectangle or image (axle at origin)
         const scaleX = this.getCoordScaleX();
@@ -615,7 +625,13 @@ class CanvasRenderer {
         if (robotConfig.imageUrl && this.robotImage && this.currentRobotUrl === robotConfig.imageUrl) {
             // Draw robot image
             this.ctx.globalAlpha = alpha;
-            this.ctx.drawImage(this.robotImage, rectX, rectY, rectW, rectH);
+            // Rotate image to match our coordinate system where the image assumes front points right
+            // but we want 0° to point up, so rotate the image drawing 90° relative to robot frame
+            this.ctx.save();
+            this.ctx.translate(rectX + rectW / 2, rectY + rectH / 2);
+            this.ctx.rotate((90 * Math.PI) / 180);
+            this.ctx.drawImage(this.robotImage, -rectH / 2, -rectW / 2, rectH, rectW);
+            this.ctx.restore();
             this.ctx.globalAlpha = 1.0;
         } else {
             // Draw robot as rectangle
