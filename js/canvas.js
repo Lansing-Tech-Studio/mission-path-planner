@@ -21,7 +21,7 @@ class CanvasRenderer {
         this.matOffsetX = 0;
         this.matOffsetY = 0;
         
-        // Scale factor (pixels per cm)
+        // Scale factor (pixels per cm) - will be calculated dynamically
         this.scale = 3;
         
         this.matImage = null;
@@ -37,12 +37,46 @@ class CanvasRenderer {
         
         this.initCanvas();
         this.setupDragging();
+        this.setupResize();
     }
     
     initCanvas() {
-        // Set canvas size based on table dimensions
+        this.updateCanvasSize();
+    }
+    
+    setupResize() {
+        // Update canvas size when window resizes
+        window.addEventListener('resize', () => this.updateCanvasSize());
+    }
+    
+    updateCanvasSize() {
+        // Get available space in the right panel
+        const rightPanel = this.canvas.parentElement;
+        const availableWidth = rightPanel.clientWidth - 40; // Subtract padding
+        const availableHeight = rightPanel.clientHeight - 40; // Subtract padding
+        
+        // Calculate aspect ratio of table
+        const tableAspect = this.tableWidth / this.tableHeight;
+        
+        // Calculate scale to fit available space while maintaining aspect ratio
+        let scale;
+        if (availableWidth / availableHeight > tableAspect) {
+            // Height is the limiting factor
+            scale = availableHeight / this.tableHeight;
+        } else {
+            // Width is the limiting factor
+            scale = availableWidth / this.tableWidth;
+        }
+        
+        // Update scale and canvas dimensions
+        this.scale = scale;
         this.canvas.width = this.tableWidth * this.scale;
         this.canvas.height = this.tableHeight * this.scale;
+        
+        // Trigger re-render if mission planner exists
+        if (window.missionPlanner) {
+            window.missionPlanner.update();
+        }
     }
     
     setupDragging() {
@@ -64,7 +98,6 @@ class CanvasRenderer {
     }
     
     isPointInRobot(x, y, robotConfig) {
-        // Check if point (x, y) in mat coordinates is inside the starting robot
         const dx = x - robotConfig.startX;
         const dy = y - robotConfig.startY;
         
@@ -83,12 +116,23 @@ class CanvasRenderer {
     }
     
     getRotationHandlePosition(robotConfig) {
-        // Calculate rotation handle position (offset from robot center in front)
+        // Calculate rotation handle position in mat coordinates
         const angleRad = (robotConfig.startAngle * Math.PI) / 180;
-        const handleDistance = (robotConfig.length - robotConfig.wheelOffset + 15); // 15cm in front
         
-        const handleX = robotConfig.startX + handleDistance * Math.cos(angleRad);
-        const handleY = robotConfig.startY + handleDistance * Math.sin(angleRad);
+        // In drawing: handle is at (rectX + rectW + handleDistance) where:
+        // - rectX + rectW = (length - wheelOffset) * scaleX pixels from robot center
+        // - handleDistance = 45 * (scaleX / this.scale) pixels
+        // Total pixels from center: (length - wheelOffset) * scaleX + 45 * (scaleX / this.scale)
+        // Convert to cm by dividing by scaleX:
+        // = (length - wheelOffset) + 45 * (scaleX / this.scale) / scaleX
+        // = (length - wheelOffset) + 45 / this.scale
+        const scaleX = this.getCoordScaleX();
+        const frontOfRobotCm = robotConfig.length - robotConfig.wheelOffset;
+        const handleOffsetCm = 45 / this.scale;
+        const totalDistanceCm = frontOfRobotCm + handleOffsetCm;
+        
+        const handleX = robotConfig.startX + totalDistanceCm * Math.cos(angleRad);
+        const handleY = robotConfig.startY + totalDistanceCm * Math.sin(angleRad);
         
         return { x: handleX, y: handleY };
     }
@@ -99,15 +143,18 @@ class CanvasRenderer {
         const dy = y - handle.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Convert pixel radius to coordinate space
-        const coordRadius = this.rotationHandleRadius / this.getCoordScaleX();
-        return distance <= coordRadius;
+        // Click radius in cm - made larger for easier clicking
+        const handleRadiusCm = 6.0; // 3cm click radius
+        return distance <= handleRadiusCm;
     }
     
     onMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
+        // Account for CSS scaling of canvas
+        const cssScaleX = this.canvas.width / rect.width;
+        const cssScaleY = this.canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * cssScaleX;
+        const canvasY = (e.clientY - rect.top) * cssScaleY;
         
         const matX = this.canvasToCoordX(canvasX);
         const matY = this.canvasToCoordY(canvasY);
@@ -115,13 +162,17 @@ class CanvasRenderer {
         if (!this.robotConfig) return;
         
         // Check if clicking on rotation handle first (higher priority)
-        if (this.isPointInRotationHandle(matX, matY, this.robotConfig)) {
+        const onRotationHandle = this.isPointInRotationHandle(matX, matY, this.robotConfig);
+        const onRobotBody = this.isPointInRobot(matX, matY, this.robotConfig);
+        
+        if (onRotationHandle) {
             this.isRotating = true;
             this.canvas.style.cursor = 'grabbing';
         }
         // Check if clicking on the starting robot
-        else if (this.isPointInRobot(matX, matY, this.robotConfig)) {
+        else if (onRobotBody) {
             this.isDragging = true;
+            // Store the offset from robot center (axle position) to click point
             this.dragOffsetX = matX - this.robotConfig.startX;
             this.dragOffsetY = matY - this.robotConfig.startY;
             this.canvas.style.cursor = 'grabbing';
@@ -130,8 +181,11 @@ class CanvasRenderer {
     
     onMouseMove(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
+        // Account for CSS scaling of canvas
+        const cssScaleX = this.canvas.width / rect.width;
+        const cssScaleY = this.canvas.height / rect.height;
+        const canvasX = (e.clientX - rect.left) * cssScaleX;
+        const canvasY = (e.clientY - rect.top) * cssScaleY;
         
         const matX = this.canvasToCoordX(canvasX);
         const matY = this.canvasToCoordY(canvasY);
@@ -153,7 +207,7 @@ class CanvasRenderer {
                 window.missionPlanner.update();
             }
         } else if (this.isDragging && this.robotConfig) {
-            // Update robot position
+            // Calculate new robot position maintaining the offset from where user clicked
             const newX = matX - this.dragOffsetX;
             const newY = matY - this.dragOffsetY;
             
@@ -621,41 +675,46 @@ class CanvasRenderer {
     }
     
     drawRotationHandle(rectX, rectW) {
-        // Draw rotation handle beyond the arrow
-        const handleX = rectX + rectW + 45; // Beyond arrow (25 + 20)
+        // Draw rotation handle beyond the arrow (in coordinate space: 15cm beyond robot)
+        const scaleX = this.getCoordScaleX();
+        const handleDistance = 45 * (scaleX / this.scale); // Scale the distance proportionally
+        const handleX = rectX + rectW + handleDistance;
+        const arrowEnd = rectX + rectW + 25 * (scaleX / this.scale);
         
         // Draw connecting line
         this.ctx.strokeStyle = '#FF5722'; // Deep orange
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([3, 3]);
         this.ctx.beginPath();
-        this.ctx.moveTo(rectX + rectW + 25, 0);
+        this.ctx.moveTo(arrowEnd, 0);
         this.ctx.lineTo(handleX, 0);
         this.ctx.stroke();
         this.ctx.setLineDash([]);
         
-        // Draw circular handle
+        // Draw circular handle (scale with canvas)
+        const handleRadius = 8 * Math.max(0.5, Math.min(1.5, this.scale / 3)); // Scale between 50% and 150%
         this.ctx.fillStyle = '#FF5722';
         this.ctx.strokeStyle = '#FFFFFF';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.arc(handleX, 0, this.rotationHandleRadius, 0, Math.PI * 2);
+        this.ctx.arc(handleX, 0, handleRadius, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.stroke();
         
-        // Draw rotation arrows inside circle
+        // Draw rotation arrows inside circle (scale with handle)
         this.ctx.strokeStyle = '#FFFFFF';
         this.ctx.lineWidth = 1.5;
         this.ctx.beginPath();
-        // Draw curved arrow (partial circle with arrowhead)
-        this.ctx.arc(handleX, 0, 4, -0.3, Math.PI * 1.3);
+        const innerRadius = handleRadius * 0.5;
+        this.ctx.arc(handleX, 0, innerRadius, -0.3, Math.PI * 1.3);
         this.ctx.stroke();
-        // Small arrowhead
+        // Small arrowhead (scaled)
+        const arrowSize = handleRadius * 0.4;
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.beginPath();
-        this.ctx.moveTo(handleX - 3.5, -2);
-        this.ctx.lineTo(handleX - 3.5, 2);
-        this.ctx.lineTo(handleX - 1, 0);
+        this.ctx.moveTo(handleX - innerRadius - arrowSize * 0.3, -arrowSize * 0.5);
+        this.ctx.lineTo(handleX - innerRadius - arrowSize * 0.3, arrowSize * 0.5);
+        this.ctx.lineTo(handleX - innerRadius + arrowSize * 0.3, 0);
         this.ctx.closePath();
         this.ctx.fill();
     }
