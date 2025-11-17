@@ -31,15 +31,20 @@ class MissionPlanner {
     }
     
     setupEventListeners() {
-        // Left subpanel collapse toggle
-        const collapseToggle = document.getElementById('collapseToggle');
-        const leftSubpanel = document.querySelector('.left-subpanel');
-        
-        if (collapseToggle && leftSubpanel) {
-            collapseToggle.addEventListener('click', () => {
-                leftSubpanel.classList.toggle('collapsed');
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+                
+                // Remove active class from all buttons and content
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.querySelector(`.tab-content[data-tab="${targetTab}"]`).classList.add('active');
             });
-        }
+        });
         
         // Section collapse/expand functionality
         document.querySelectorAll('.section-header').forEach(header => {
