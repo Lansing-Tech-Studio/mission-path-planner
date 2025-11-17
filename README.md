@@ -1,4 +1,4 @@
-# FLL Mission Path Planner
+# Mission Path Planner
 
 A web-based application for planning and visualizing robot paths for FIRST LEGO League (FLL) Challenge missions using Spike Prime robots.
 

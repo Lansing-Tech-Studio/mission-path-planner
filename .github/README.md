@@ -1,4 +1,4 @@
-# FLL Mission Path Planner
+# Mission Path Planner
 
 A web-based application for planning robot paths for FIRST LEGO League Challenge missions.
 
