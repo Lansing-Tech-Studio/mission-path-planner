@@ -53,8 +53,16 @@ class PrintManager {
         // Program blocks
         this.populateProgramBlocks(data.program);
         
-        // Robot configuration
-        this.populateRobotConfig(data.robot);
+        // Robot configuration (conditionally show based on checkbox)
+        const printConfigSection = document.querySelector('.print-config');
+        const includeRobotConfig = document.getElementById('printRobotConfig').checked;
+        
+        if (includeRobotConfig) {
+            this.populateRobotConfig(data.robot);
+            printConfigSection.style.display = 'block';
+        } else {
+            printConfigSection.style.display = 'none';
+        }
     }
     
     copyCanvas(sourceCanvas) {

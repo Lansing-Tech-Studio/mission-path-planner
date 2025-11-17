@@ -6,10 +6,10 @@ class RobotConfig {
             width: 15,
             wheelOffset: 3.1,
             wheelCircumference: 19.6,
-            wheelBase: 12,
+            wheelBase: 13.3,
             imageUrl: '',
-            startX: 30,
-            startY: 6,
+            startX: 33,
+            startY: 3.3,
             startAngle: 0
         };
     }

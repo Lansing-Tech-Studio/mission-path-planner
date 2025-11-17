@@ -18,11 +18,11 @@
                 <div class="section-content">
                 <div class="form-group">
                     <label for="teamName">Team Name:</label>
-                    <input type="text" id="teamName" placeholder="Enter team name">
+                    <input type="text" id="teamName" value="Dad's Rule" placeholder="Enter team name">
                 </div>
                 <div class="form-group">
                     <label for="teamLogo">Team Logo URL (optional):</label>
-                    <input type="url" id="teamLogo" placeholder="https://...">
+                    <input type="url" id="teamLogo" value="https://lansingtechstudio.org/assets/images/logo.png" placeholder="https://...">
                 </div>
                 <div class="form-group">
                     <label for="description">Description (optional):</label>
@@ -81,7 +81,7 @@
                 </div>
                 <div class="form-group">
                     <label for="wheelBase">Wheel Base (cm):</label>
-                    <input type="number" id="wheelBase" value="12" min="0.1" step="0.1">
+                    <input type="number" id="wheelBase" value="13.3" min="0.1" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="robotImageUrl">Robot Image URL (optional):</label>
@@ -96,11 +96,11 @@
                 <div class="section-content">
                 <div class="form-group">
                     <label for="startX">X Position (cm):</label>
-                    <input type="number" id="startX" value="30" step="0.1">
+                    <input type="number" id="startX" value="33" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="startY">Y Position (cm):</label>
-                    <input type="number" id="startY" value="6" step="0.1">
+                    <input type="number" id="startY" value="3.3" step="0.1">
                 </div>
                 <div class="form-group">
                     <label for="startAngle">Orientation (degrees):</label>
@@ -129,6 +129,12 @@
                     <label for="planDate">Plan Date:</label>
                     <input type="date" id="planDate">
                 </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="printRobotConfig">
+                        Include Robot Configuration in Print
+                    </label>
+                </div>
                 <div class="button-group">
                     <button id="exportBtn" class="btn btn-primary">Export JSON</button>
                     <button id="importBtn" class="btn btn-secondary">Import JSON</button>
@@ -149,14 +155,15 @@
     <div id="printTemplate" style="display: none;">
         <div class="print-content">
             <div class="print-header">
+                <img id="printTeamLogo" class="print-logo" style="display: none;" alt="Team Logo">
                 <h1 id="printTeamName"></h1>
-                <img id="printTeamLogo" style="max-height: 60px;">
-                <p id="printPlanDate"></p>
+                <p id="printPlanDate" class="print-date"></p>
             </div>
             <div class="print-description"></div>
             <div class="print-canvas-container">
                 <canvas id="printCanvas"></canvas>
             </div>
+            <div class="print-watermark">Created with Mission Path Planner</div>
             <div class="print-program">
                 <h2>Program</h2>
                 <div id="printProgramBlocks"></div>
