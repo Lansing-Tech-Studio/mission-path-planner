@@ -462,7 +462,7 @@ class CanvasRenderer {
         // Add 90° so that 0° points up instead of right
         this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
         
-        // Draw semi-transparent robot rectangle
+        // Draw semi-transparent robot rectangle or image
         const scaleX = this.getCoordScaleX();
         const scaleY = this.getCoordScaleY();
         const rectX = -(robotConfig.wheelOffset * scaleX);
@@ -470,21 +470,39 @@ class CanvasRenderer {
         const rectW = robotConfig.length * scaleX;
         const rectH = robotConfig.width * scaleY;
         
-        // Ghost robot styling
-        this.ctx.fillStyle = 'rgba(150, 150, 150, 0.3)';
-        this.ctx.fillRect(rectX, rectY, rectW, rectH);
-        
-        this.ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([5, 5]);
-        this.ctx.strokeRect(rectX, rectY, rectW, rectH);
-        this.ctx.setLineDash([]);
-        
-        // Draw front indicator
-        this.ctx.fillStyle = 'rgba(255, 152, 0, 0.4)';
-        const frontX = rectX + rectW - 5;
-        const frontY = rectY + rectH / 2 - 10;
-        this.ctx.fillRect(frontX, frontY, 5, 20);
+        if (robotConfig.imageUrl && this.robotImage && this.currentRobotUrl === robotConfig.imageUrl) {
+            // Draw robot image with transparency
+            this.ctx.globalAlpha = 0.4;
+            this.ctx.save();
+            this.ctx.translate(rectX + rectW / 2, rectY + rectH / 2);
+            this.ctx.rotate((90 * Math.PI) / 180);
+            this.ctx.drawImage(this.robotImage, -rectH / 2, -rectW / 2, rectH, rectW);
+            this.ctx.restore();
+            this.ctx.globalAlpha = 1.0;
+            
+            // Draw dashed border around image
+            this.ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.strokeRect(rectX, rectY, rectW, rectH);
+            this.ctx.setLineDash([]);
+        } else {
+            // Ghost robot styling (rectangle fallback)
+            this.ctx.fillStyle = 'rgba(150, 150, 150, 0.3)';
+            this.ctx.fillRect(rectX, rectY, rectW, rectH);
+            
+            this.ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.strokeRect(rectX, rectY, rectW, rectH);
+            this.ctx.setLineDash([]);
+            
+            // Draw front indicator
+            this.ctx.fillStyle = 'rgba(255, 152, 0, 0.4)';
+            const frontX = rectX + rectW - 5;
+            const frontY = rectY + rectH / 2 - 10;
+            this.ctx.fillRect(frontX, frontY, 5, 20);
+        }
         
         this.ctx.restore();
         
