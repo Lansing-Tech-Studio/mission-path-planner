@@ -8,9 +8,14 @@ class CanvasRenderer {
         this.tableWidth = 243.84; // cm (96 inches / 8 feet)
         this.tableHeight = 121.92; // cm (48 inches / 4 feet)
         
-        // Mat always fills the full height (4 feet)
-        this.matWidth = this.tableWidth; // Will be adjusted based on image aspect ratio
-        this.matHeight = this.tableHeight; // Always 4 feet
+        // Mat coordinate space is fixed at standard FLL mat dimensions (240cm x 120cm)
+        // This is what user coordinates are relative to
+        this.matCoordWidth = 240; // cm
+        this.matCoordHeight = 120; // cm
+        
+        // Mat visual dimensions (will be adjusted based on image aspect ratio)
+        this.matVisualWidth = this.tableWidth; // Will be adjusted when image loads
+        this.matVisualHeight = this.tableHeight; // Always 4 feet
         
         // Mat offset from table origin (top-left)
         this.matOffsetX = 0;
@@ -40,13 +45,33 @@ class CanvasRenderer {
         // Calculate mat offset based on alignment
         if (alignment === 'right') {
             // Right-aligned (for single home configuration)
-            this.matOffsetX = this.tableWidth - this.matWidth;
+            this.matOffsetX = this.tableWidth - this.matVisualWidth;
             this.matOffsetY = 0;
         } else {
             // Centered (default for dual home)
-            this.matOffsetX = (this.tableWidth - this.matWidth) / 2;
+            this.matOffsetX = (this.tableWidth - this.matVisualWidth) / 2;
             this.matOffsetY = 0;
         }
+    }
+    
+    // Convert from mat coordinate space (240cm x 120cm) to canvas pixels
+    coordToCanvasX(x) {
+        const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
+        return (this.matOffsetX + x * coordToVisualX) * this.scale;
+    }
+    
+    coordToCanvasY(y) {
+        const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
+        return (this.matOffsetY + y * coordToVisualY) * this.scale;
+    }
+    
+    // Get scale factor for converting coordinate space dimensions to canvas pixels
+    getCoordScaleX() {
+        return (this.matVisualWidth / this.matCoordWidth) * this.scale;
+    }
+    
+    getCoordScaleY() {
+        return (this.matVisualHeight / this.matCoordHeight) * this.scale;
     }
     
     render(matUrl, robotConfig, path) {
@@ -94,29 +119,33 @@ class CanvasRenderer {
         // Calculate mat position on canvas
         const matCanvasX = this.matOffsetX * this.scale;
         const matCanvasY = this.matOffsetY * this.scale;
-        const matCanvasW = this.matWidth * this.scale;
-        const matCanvasH = this.matHeight * this.scale;
+        const matCanvasW = this.matVisualWidth * this.scale;
+        const matCanvasH = this.matVisualHeight * this.scale;
         
         // Draw mat area background (white)
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillRect(matCanvasX, matCanvasY, matCanvasW, matCanvasH);
         
-        // Draw grid on mat area for reference
+        // Draw grid on mat area for reference (based on coordinate space)
         this.ctx.strokeStyle = '#e0e0e0';
         this.ctx.lineWidth = 1;
         
-        // Draw 10cm grid lines on mat
-        for (let x = 0; x <= this.matWidth; x += 10) {
+        // Scale factor from coordinate space to visual space
+        const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
+        const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
+        
+        // Draw 10cm grid lines on mat (in coordinate space)
+        for (let x = 0; x <= this.matCoordWidth; x += 10) {
             this.ctx.beginPath();
-            this.ctx.moveTo(matCanvasX + x * this.scale, matCanvasY);
-            this.ctx.lineTo(matCanvasX + x * this.scale, matCanvasY + matCanvasH);
+            this.ctx.moveTo(matCanvasX + x * coordToVisualX * this.scale, matCanvasY);
+            this.ctx.lineTo(matCanvasX + x * coordToVisualX * this.scale, matCanvasY + matCanvasH);
             this.ctx.stroke();
         }
         
-        for (let y = 0; y <= this.matHeight; y += 10) {
+        for (let y = 0; y <= this.matCoordHeight; y += 10) {
             this.ctx.beginPath();
-            this.ctx.moveTo(matCanvasX, matCanvasY + y * this.scale);
-            this.ctx.lineTo(matCanvasX + matCanvasW, matCanvasY + y * this.scale);
+            this.ctx.moveTo(matCanvasX, matCanvasY + y * coordToVisualY * this.scale);
+            this.ctx.lineTo(matCanvasX + matCanvasW, matCanvasY + y * coordToVisualY * this.scale);
             this.ctx.stroke();
         }
         
@@ -142,8 +171,8 @@ class CanvasRenderer {
             const drawHeight = this.tableHeight * this.scale;
             const drawWidth = drawHeight * imgAspect;
             
-            // Update mat width based on actual image dimensions
-            this.matWidth = this.tableHeight * imgAspect;
+            // Update mat visual width based on actual image dimensions
+            this.matVisualWidth = this.tableHeight * imgAspect;
             this.updateMatAlignment(this.matAlignment);
             
             const matCanvasX = this.matOffsetX * this.scale;
@@ -160,9 +189,9 @@ class CanvasRenderer {
         img.onload = () => {
             this.matImage = img;
             
-            // Calculate mat width based on image aspect ratio
+            // Calculate mat visual width based on image aspect ratio
             const imgAspect = img.width / img.height;
-            this.matWidth = this.tableHeight * imgAspect;
+            this.matVisualWidth = this.tableHeight * imgAspect;
             this.updateMatAlignment(this.matAlignment);
             
             // Redraw with image
@@ -174,8 +203,8 @@ class CanvasRenderer {
         img.onerror = () => {
             console.error('Failed to load mat image:', url);
             this.matImage = null;
-            // Reset to default mat width
-            this.matWidth = this.tableWidth;
+            // Reset to default mat visual width
+            this.matVisualWidth = this.tableWidth;
             this.updateMatAlignment(this.matAlignment);
         };
         
@@ -202,8 +231,8 @@ class CanvasRenderer {
         
         for (let i = 0; i < path.points.length; i++) {
             const point = path.points[i];
-            const screenX = (this.matOffsetX + point.x) * this.scale;
-            const screenY = (this.matOffsetY + point.y) * this.scale;
+            const screenX = this.coordToCanvasX(point.x);
+            const screenY = this.coordToCanvasY(point.y);
             
             if (i === 0) {
                 this.ctx.moveTo(screenX, screenY);
@@ -217,15 +246,9 @@ class CanvasRenderer {
     
     drawWheelPaths(path) {
         if (!path.points || path.points.length === 0) return;
-        
-        console.log('drawWheelPaths called with', path.points.length, 'points');
-        
+                
         // Draw left wheel path (blue)
         if (path.points[0].leftWheelX !== undefined) {
-            console.log('Drawing left wheel path - color: #2196F3, width: 2');
-            console.log('First left wheel point:', path.points[0].leftWheelX, path.points[0].leftWheelY);
-            console.log('First left screen coords:', path.points[0].leftWheelX * this.scale, path.points[0].leftWheelY * this.scale);
-            
             this.ctx.save();
             this.ctx.strokeStyle = '#1976D2';
             this.ctx.lineWidth = 2.5;
@@ -237,8 +260,8 @@ class CanvasRenderer {
             for (let i = 0; i < path.points.length; i++) {
                 const point = path.points[i];
                 if (point.leftWheelX !== undefined && point.leftWheelY !== undefined) {
-                    const screenX = (this.matOffsetX + point.leftWheelX) * this.scale;
-                    const screenY = (this.matOffsetY + point.leftWheelY) * this.scale;
+                    const screenX = this.coordToCanvasX(point.leftWheelX);
+                    const screenY = this.coordToCanvasY(point.leftWheelY);
                     
                     if (i === 0) {
                         this.ctx.moveTo(screenX, screenY);
@@ -250,17 +273,12 @@ class CanvasRenderer {
             
             this.ctx.stroke();
             this.ctx.restore();
-            console.log('Left wheel path drawn');
         } else {
             console.log('No left wheel coordinates in path points');
         }
         
         // Draw right wheel path (orange)
         if (path.points[0].rightWheelX !== undefined) {
-            console.log('Drawing right wheel path - color: #FF9800, width: 2');
-            console.log('First right wheel point:', path.points[0].rightWheelX, path.points[0].rightWheelY);
-            console.log('First right screen coords:', path.points[0].rightWheelX * this.scale, path.points[0].rightWheelY * this.scale);
-            
             this.ctx.save();
             this.ctx.strokeStyle = '#F57C00';
             this.ctx.lineWidth = 2.5;
@@ -272,8 +290,8 @@ class CanvasRenderer {
             for (let i = 0; i < path.points.length; i++) {
                 const point = path.points[i];
                 if (point.rightWheelX !== undefined && point.rightWheelY !== undefined) {
-                    const screenX = (this.matOffsetX + point.rightWheelX) * this.scale;
-                    const screenY = (this.matOffsetY + point.rightWheelY) * this.scale;
+                    const screenX = this.coordToCanvasX(point.rightWheelX);
+                    const screenY = this.coordToCanvasY(point.rightWheelY);
                     
                     if (i === 0) {
                         this.ctx.moveTo(screenX, screenY);
@@ -285,7 +303,6 @@ class CanvasRenderer {
             
             this.ctx.stroke();
             this.ctx.restore();
-            console.log('Right wheel path drawn');
         } else {
             console.log('No right wheel coordinates in path points');
         }
@@ -299,7 +316,7 @@ class CanvasRenderer {
         for (let i = 0; i < path.points.length; i += Math.max(1, Math.floor(path.points.length / 50))) {
             const point = path.points[i];
             this.ctx.beginPath();
-            this.ctx.arc((this.matOffsetX + point.x) * this.scale, (this.matOffsetY + point.y) * this.scale, 2, 0, Math.PI * 2);
+            this.ctx.arc(this.coordToCanvasX(point.x), this.coordToCanvasY(point.y), 2, 0, Math.PI * 2);
             this.ctx.fill();
         }
         
@@ -311,7 +328,7 @@ class CanvasRenderer {
             const point = path.points[i];
             if (point.segmentEnd) {
                 this.ctx.beginPath();
-                this.ctx.arc((this.matOffsetX + point.x) * this.scale, (this.matOffsetY + point.y) * this.scale, 4, 0, Math.PI * 2);
+                this.ctx.arc(this.coordToCanvasX(point.x), this.coordToCanvasY(point.y), 4, 0, Math.PI * 2);
                 this.ctx.fill();
                 this.ctx.stroke();
             }
@@ -324,7 +341,7 @@ class CanvasRenderer {
             this.ctx.strokeStyle = '#2E7D32';
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
-            this.ctx.arc((this.matOffsetX + start.x) * this.scale, (this.matOffsetY + start.y) * this.scale, 5, 0, Math.PI * 2);
+            this.ctx.arc(this.coordToCanvasX(start.x), this.coordToCanvasY(start.y), 5, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.stroke();
         }
@@ -336,7 +353,7 @@ class CanvasRenderer {
             this.ctx.strokeStyle = '#c62828';
             this.ctx.lineWidth = 2;
             this.ctx.beginPath();
-            this.ctx.arc((this.matOffsetX + end.x) * this.scale, (this.matOffsetY + end.y) * this.scale, 5, 0, Math.PI * 2);
+            this.ctx.arc(this.coordToCanvasX(end.x), this.coordToCanvasY(end.y), 5, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.stroke();
         }
@@ -345,8 +362,8 @@ class CanvasRenderer {
     drawRobotOutline(robotConfig, x, y, angleDeg) {
         this.ctx.save();
         
-        const screenX = (this.matOffsetX + x) * this.scale;
-        const screenY = (this.matOffsetY + y) * this.scale;
+        const screenX = this.coordToCanvasX(x);
+        const screenY = this.coordToCanvasY(y);
         
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
@@ -355,10 +372,12 @@ class CanvasRenderer {
         this.ctx.rotate((angleDeg * Math.PI) / 180);
         
         // Draw robot rectangle (axle at origin, back is wheelOffset behind, front is (length - wheelOffset) ahead)
-        const rectX = -(robotConfig.wheelOffset * this.scale);
-        const rectY = -(robotConfig.width * this.scale) / 2;
-        const rectW = robotConfig.length * this.scale;
-        const rectH = robotConfig.width * this.scale;
+        const scaleX = this.getCoordScaleX();
+        const scaleY = this.getCoordScaleY();
+        const rectX = -(robotConfig.wheelOffset * scaleX);
+        const rectY = -(robotConfig.width * scaleY) / 2;
+        const rectW = robotConfig.length * scaleX;
+        const rectH = robotConfig.width * scaleY;
         
         this.ctx.fillRect(rectX, rectY, rectW, rectH);
         this.ctx.strokeRect(rectX, rectY, rectW, rectH);
@@ -369,8 +388,8 @@ class CanvasRenderer {
     drawRobot(robotConfig, x, y, angleDeg, alpha = 1.0) {
         this.ctx.save();
         
-        const screenX = (this.matOffsetX + x) * this.scale;
-        const screenY = (this.matOffsetY + y) * this.scale;
+        const screenX = this.coordToCanvasX(x);
+        const screenY = this.coordToCanvasY(y);
         
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
@@ -379,10 +398,12 @@ class CanvasRenderer {
         this.ctx.rotate((angleDeg * Math.PI) / 180);
         
         // Draw robot rectangle or image (axle at origin)
-        const rectX = -(robotConfig.wheelOffset * this.scale);
-        const rectY = -(robotConfig.width * this.scale) / 2;
-        const rectW = robotConfig.length * this.scale;
-        const rectH = robotConfig.width * this.scale;
+        const scaleX = this.getCoordScaleX();
+        const scaleY = this.getCoordScaleY();
+        const rectX = -(robotConfig.wheelOffset * scaleX);
+        const rectY = -(robotConfig.width * scaleY) / 2;
+        const rectW = robotConfig.length * scaleX;
+        const rectH = robotConfig.width * scaleY;
         
         if (robotConfig.imageUrl && this.robotImage && this.currentRobotUrl === robotConfig.imageUrl) {
             // Draw robot image

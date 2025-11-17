@@ -2,20 +2,24 @@
 class RobotConfig {
     constructor() {
         this.config = {
-            length: 20,
+            length: 16.5,
             width: 15,
-            wheelOffset: 5,
-            wheelCircumference: 17.6,
+            wheelOffset: 3.1,
+            wheelCircumference: 19.6,
             wheelBase: 12,
             imageUrl: '',
             startX: 30,
-            startY: 30,
-            startAngle: 0
+            startY: 114,
+            startAngle: 270
         };
     }
     
     getConfig() {
         // Read current values from form inputs
+        const startXValue = document.getElementById('startX').value;
+        const startYValue = document.getElementById('startY').value;
+        const startAngleValue = document.getElementById('startAngle').value;
+        
         return {
             length: parseFloat(document.getElementById('robotLength').value) || 20,
             width: parseFloat(document.getElementById('robotWidth').value) || 15,
@@ -23,9 +27,9 @@ class RobotConfig {
             wheelCircumference: parseFloat(document.getElementById('wheelCircumference').value) || 17.6,
             wheelBase: parseFloat(document.getElementById('wheelBase').value) || 12,
             imageUrl: document.getElementById('robotImageUrl').value || '',
-            startX: parseFloat(document.getElementById('startX').value) || 30,
-            startY: parseFloat(document.getElementById('startY').value) || 30,
-            startAngle: parseFloat(document.getElementById('startAngle').value) || 0
+            startX: startXValue !== '' ? parseFloat(startXValue) : 30,
+            startY: startYValue !== '' ? parseFloat(startYValue) : 30,
+            startAngle: startAngleValue !== '' ? parseFloat(startAngleValue) : 0
         };
     }
     

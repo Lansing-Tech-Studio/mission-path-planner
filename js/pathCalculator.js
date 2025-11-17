@@ -246,14 +246,6 @@ class PathCalculator {
                     rightWheelX: rightWheelX,
                     rightWheelY: rightWheelY
                 });
-                
-                // Debug: log first and last points
-                if (i === 0 || i === numSteps) {
-                    console.log(`Step ${i}: center=(${currentX.toFixed(2)}, ${currentY.toFixed(2)}), ` +
-                        `left=(${leftWheelX.toFixed(2)}, ${leftWheelY.toFixed(2)}), ` +
-                        `right=(${rightWheelX.toFixed(2)}, ${rightWheelY.toFixed(2)}), ` +
-                        `angle=${currentAngle.toFixed(2)}`);
-                }
             }
         }
         
