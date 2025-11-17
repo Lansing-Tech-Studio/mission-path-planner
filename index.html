@@ -14,7 +14,8 @@
             
             <!-- Team Info Section -->
             <section class="section">
-                <h2>Team Info</h2>
+                <h2 class="section-header">Team Info<span class="collapse-icon">−</span></h2>
+                <div class="section-content">
                 <div class="form-group">
                     <label for="teamName">Team Name:</label>
                     <input type="text" id="teamName" placeholder="Enter team name">
@@ -27,11 +28,13 @@
                     <label for="description">Description (optional):</label>
                     <textarea id="description" rows="3" placeholder="Project description..."></textarea>
                 </div>
+                </div>
             </section>
 
             <!-- Mat Selection Section -->
             <section class="section">
-                <h2>Mission Mat</h2>
+                <h2 class="section-header">Mission Mat<span class="collapse-icon">−</span></h2>
+                <div class="section-content">
                 <div class="form-group">
                     <label for="matSelect">Select Mat:</label>
                     <select id="matSelect">
@@ -53,11 +56,13 @@
                         <option value="right">Right-Aligned (Single Home)</option>
                     </select>
                 </div>
+                </div>
             </section>
 
             <!-- Robot Configuration Section -->
             <section class="section">
-                <h2>Robot Configuration</h2>
+                <h2 class="section-header">Robot Configuration<span class="collapse-icon">−</span></h2>
+                <div class="section-content">
                 <div class="form-group">
                     <label for="robotLength">Length (cm):</label>
                     <input type="number" id="robotLength" value="16.5" min="1" step="0.1">
@@ -82,11 +87,13 @@
                     <label for="robotImageUrl">Robot Image URL (optional):</label>
                     <input type="url" id="robotImageUrl" value="img/DadBot.png" placeholder="https://...">
                 </div>
+                </div>
             </section>
 
             <!-- Starting Position Section -->
             <section class="section">
-                <h2>Starting Position</h2>
+                <h2 class="section-header">Starting Position<span class="collapse-icon">−</span></h2>
+                <div class="section-content">
                 <div class="form-group">
                     <label for="startX">X Position (cm):</label>
                     <input type="number" id="startX" value="30" step="0.1">
@@ -99,21 +106,25 @@
                     <label for="startAngle">Orientation (degrees):</label>
                     <input type="number" id="startAngle" value="0" step="1">
                 </div>
+                </div>
             </section>
 
             <!-- Program Section -->
             <section class="section">
-                <h2>Program</h2>
+                <h2 class="section-header">Program<span class="collapse-icon">−</span></h2>
+                <div class="section-content">
                 <div id="programBlocks" class="program-blocks"></div>
                 <div class="button-group">
                     <button id="addTextBlock" class="btn btn-secondary">Add Text Block</button>
                     <button id="addMoveBlock" class="btn btn-primary">Add Move Block</button>
                 </div>
+                </div>
             </section>
 
             <!-- Actions Section -->
             <section class="section">
-                <h2>Actions</h2>
+                <h2 class="section-header">Actions<span class="collapse-icon">−</span></h2>
+                <div class="section-content">
                 <div class="form-group">
                     <label for="planDate">Plan Date:</label>
                     <input type="date" id="planDate">
@@ -124,6 +135,7 @@
                     <button id="printBtn" class="btn btn-secondary">Print Plan</button>
                 </div>
                 <input type="file" id="importFile" accept=".json" style="display: none;">
+                </div>
             </section>
         </div>
 

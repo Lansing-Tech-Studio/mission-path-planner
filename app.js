@@ -31,6 +31,22 @@ class MissionPlanner {
     }
     
     setupEventListeners() {
+        // Section collapse/expand functionality
+        document.querySelectorAll('.section-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const section = header.parentElement;
+                section.classList.toggle('collapsed');
+                
+                // Change icon from minus to plus and vice versa
+                const icon = header.querySelector('.collapse-icon');
+                if (section.classList.contains('collapsed')) {
+                    icon.textContent = '+';
+                } else {
+                    icon.textContent = '−';
+                }
+            });
+        });
+        
         // Robot configuration changes
         const robotInputs = [
             'robotLength', 'robotWidth', 'wheelOffset', 
