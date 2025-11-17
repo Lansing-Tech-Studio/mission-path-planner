@@ -31,6 +31,16 @@ class MissionPlanner {
     }
     
     setupEventListeners() {
+        // Left subpanel collapse toggle
+        const collapseToggle = document.getElementById('collapseToggle');
+        const leftSubpanel = document.querySelector('.left-subpanel');
+        
+        if (collapseToggle && leftSubpanel) {
+            collapseToggle.addEventListener('click', () => {
+                leftSubpanel.classList.toggle('collapsed');
+            });
+        }
+        
         // Section collapse/expand functionality
         document.querySelectorAll('.section-header').forEach(header => {
             header.addEventListener('click', () => {

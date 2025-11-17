@@ -301,6 +301,9 @@ class CanvasRenderer {
             this.drawPathBodyAndLine(path, robotConfig);
         }
         
+        // Draw text block positions (ghost robots)
+        this.drawTextBlockPositions(robotConfig);
+        
         // Draw starting robot position
         this.drawRobot(robotConfig, robotConfig.startX, robotConfig.startY, robotConfig.startAngle);
         
@@ -424,6 +427,80 @@ class CanvasRenderer {
         };
         
         img.src = url;
+    }
+    
+    drawTextBlockPositions(robotConfig) {
+        // Draw ghost robots at text block positions where showPosition is enabled
+        if (!window.missionPlanner || !window.missionPlanner.blocks) {
+            return;
+        }
+        
+        const blocks = window.missionPlanner.blocks.blocks;
+        let blockNumber = 1;
+        
+        blocks.forEach((block, index) => {
+            if (block.type === 'text' && block.showPosition) {
+                const position = window.missionPlanner.blocks.calculatePositionAtBlock(index);
+                if (position) {
+                    this.drawGhostRobot(robotConfig, position.x, position.y, position.angle, blockNumber);
+                    blockNumber++;
+                }
+            }
+        });
+    }
+    
+    drawGhostRobot(robotConfig, x, y, angleDeg, labelNumber) {
+        this.ctx.save();
+        
+        const screenX = this.coordToCanvasX(x);
+        const screenY = this.coordToCanvasY(y);
+        
+        // Translate to robot position
+        this.ctx.translate(screenX, screenY);
+        
+        // Rotate to robot angle (negate because Y-axis is flipped)
+        // Add 90° so that 0° points up instead of right
+        this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
+        
+        // Draw semi-transparent robot rectangle
+        const scaleX = this.getCoordScaleX();
+        const scaleY = this.getCoordScaleY();
+        const rectX = -(robotConfig.wheelOffset * scaleX);
+        const rectY = -(robotConfig.width * scaleY) / 2;
+        const rectW = robotConfig.length * scaleX;
+        const rectH = robotConfig.width * scaleY;
+        
+        // Ghost robot styling
+        this.ctx.fillStyle = 'rgba(150, 150, 150, 0.3)';
+        this.ctx.fillRect(rectX, rectY, rectW, rectH);
+        
+        this.ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(rectX, rectY, rectW, rectH);
+        this.ctx.setLineDash([]);
+        
+        // Draw front indicator
+        this.ctx.fillStyle = 'rgba(255, 152, 0, 0.4)';
+        const frontX = rectX + rectW - 5;
+        const frontY = rectY + rectH / 2 - 10;
+        this.ctx.fillRect(frontX, frontY, 5, 20);
+        
+        this.ctx.restore();
+        
+        // Draw label number above the ghost robot
+        this.ctx.save();
+        this.ctx.fillStyle = '#666';
+        this.ctx.strokeStyle = '#fff';
+        this.ctx.lineWidth = 3;
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        
+        const labelY = screenY - (robotConfig.width / 2) * scaleY - 8;
+        this.ctx.strokeText(`T${labelNumber}`, screenX, labelY);
+        this.ctx.fillText(`T${labelNumber}`, screenX, labelY);
+        this.ctx.restore();
     }
     
     drawPathBodyAndLine(path, robotConfig) {

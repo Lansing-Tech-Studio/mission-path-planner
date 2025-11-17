@@ -8,123 +8,133 @@
 </head>
 <body>
     <div class="container">
-        <!-- Left Panel: Configuration and Program (25%) -->
+        <!-- Left Panel: Split into Subpanels with Bottom Actions (25%) -->
         <div class="left-panel">
             <h1>Mission Planner</h1>
             
-            <!-- Team Info Section -->
-            <section class="section">
-                <h2 class="section-header">Team Info<span class="collapse-icon">−</span></h2>
-                <div class="section-content">
-                <div class="form-group">
-                    <label for="teamName">Team Name:</label>
-                    <input type="text" id="teamName" value="Dad's Rule" placeholder="Enter team name">
-                </div>
-                <div class="form-group">
-                    <label for="teamLogo">Team Logo URL (optional):</label>
-                    <input type="url" id="teamLogo" value="https://lansingtechstudio.org/assets/images/logo.png" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label for="description">Description (optional):</label>
-                    <textarea id="description" rows="3" placeholder="Project description..."></textarea>
-                </div>
-                </div>
-            </section>
+            <div class="sidebar-main">
+                <!-- Left Subpanel: Configuration -->
+                <div class="left-subpanel">
+                    <!-- Team Info Section -->
+                    <section class="section">
+                        <h2 class="section-header">Team Info<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="teamName">Team Name:</label>
+                            <input type="text" id="teamName" value="Dad's Rule" placeholder="Enter team name">
+                        </div>
+                        <div class="form-group">
+                            <label for="teamLogo">Team Logo URL (optional):</label>
+                            <input type="url" id="teamLogo" value="https://lansingtechstudio.org/assets/images/logo.png" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label for="description">Description (optional):</label>
+                            <textarea id="description" rows="3" placeholder="Project description..."></textarea>
+                        </div>
+                        </div>
+                    </section>
 
-            <!-- Mat Selection Section -->
-            <section class="section">
-                <h2 class="section-header">Mission Mat<span class="collapse-icon">−</span></h2>
-                <div class="section-content">
-                <div class="form-group">
-                    <label for="matSelect">Select Mat:</label>
-                    <select id="matSelect">
-                        <option value="blank">Blank Mat</option>
-                        <option value="2025-unearthed" selected>2025 Unearthed</option>
-                        <option value="2024-submerged">2024 Submerged</option>
-                        <option value="2023-masterpiece">2023 Masterpiece</option>
-                        <option value="custom">Custom URL</option>
-                    </select>
-                </div>
-                <div class="form-group" id="customMatUrlGroup" style="display: none;">
-                    <label for="customMatUrl">Custom Mat URL:</label>
-                    <input type="url" id="customMatUrl" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label for="matAlignment">Mat Alignment:</label>
-                    <select id="matAlignment">
-                        <option value="centered">Centered</option>
-                        <option value="right">Right-Aligned (Single Home)</option>
-                    </select>
-                </div>
-                </div>
-            </section>
+                    <!-- Mat Selection Section -->
+                    <section class="section">
+                        <h2 class="section-header">Mission Mat<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="matSelect">Select Mat:</label>
+                            <select id="matSelect">
+                                <option value="blank">Blank Mat</option>
+                                <option value="2025-unearthed" selected>2025 Unearthed</option>
+                                <option value="2024-submerged">2024 Submerged</option>
+                                <option value="2023-masterpiece">2023 Masterpiece</option>
+                                <option value="custom">Custom URL</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="customMatUrlGroup" style="display: none;">
+                            <label for="customMatUrl">Custom Mat URL:</label>
+                            <input type="url" id="customMatUrl" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label for="matAlignment">Mat Alignment:</label>
+                            <select id="matAlignment">
+                                <option value="centered">Centered</option>
+                                <option value="right">Right-Aligned (Single Home)</option>
+                            </select>
+                        </div>
+                        </div>
+                    </section>
 
-            <!-- Robot Configuration Section -->
-            <section class="section">
-                <h2 class="section-header">Robot Configuration<span class="collapse-icon">−</span></h2>
-                <div class="section-content">
-                <div class="form-group">
-                    <label for="robotLength">Length (cm):</label>
-                    <input type="number" id="robotLength" value="16.5" min="1" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="robotWidth">Width (cm):</label>
-                    <input type="number" id="robotWidth" value="15" min="1" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="wheelOffset">Wheel Offset from Back (cm):</label>
-                    <input type="number" id="wheelOffset" value="3.1" min="0" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="wheelCircumference">Wheel Circumference (cm):</label>
-                    <input type="number" id="wheelCircumference" value="19.6" min="0.1" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="wheelBase">Wheel Base (cm):</label>
-                    <input type="number" id="wheelBase" value="13.3" min="0.1" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="robotImageUrl">Robot Image URL (optional):</label>
-                    <input type="url" id="robotImageUrl" value="img/DadBot.png" placeholder="https://...">
-                </div>
-                </div>
-            </section>
+                    <!-- Robot Configuration Section -->
+                    <section class="section">
+                        <h2 class="section-header">Robot Configuration<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="robotLength">Length (cm):</label>
+                            <input type="number" id="robotLength" value="16.5" min="1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="robotWidth">Width (cm):</label>
+                            <input type="number" id="robotWidth" value="15" min="1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelOffset">Wheel Offset from Back (cm):</label>
+                            <input type="number" id="wheelOffset" value="3.1" min="0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelCircumference">Wheel Circumference (cm):</label>
+                            <input type="number" id="wheelCircumference" value="19.6" min="0.1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelBase">Wheel Base (cm):</label>
+                            <input type="number" id="wheelBase" value="13.3" min="0.1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="robotImageUrl">Robot Image URL (optional):</label>
+                            <input type="url" id="robotImageUrl" value="img/DadBot.png" placeholder="https://...">
+                        </div>
+                        </div>
+                    </section>
 
-            <!-- Starting Position Section -->
-            <section class="section">
-                <h2 class="section-header">Starting Position<span class="collapse-icon">−</span></h2>
-                <div class="section-content">
-                <div class="form-group">
-                    <label for="startX">X Position (cm):</label>
-                    <input type="number" id="startX" value="33" step="0.1">
+                    <!-- Starting Position Section -->
+                    <section class="section">
+                        <h2 class="section-header">Starting Position<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="startX">X Position (cm):</label>
+                            <input type="number" id="startX" value="33" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="startY">Y Position (cm):</label>
+                            <input type="number" id="startY" value="3.3" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="startAngle">Orientation (degrees):</label>
+                            <input type="number" id="startAngle" value="0" step="1">
+                        </div>
+                        </div>
+                    </section>
                 </div>
-                <div class="form-group">
-                    <label for="startY">Y Position (cm):</label>
-                    <input type="number" id="startY" value="3.3" step="0.1">
-                </div>
-                <div class="form-group">
-                    <label for="startAngle">Orientation (degrees):</label>
-                    <input type="number" id="startAngle" value="0" step="1">
-                </div>
-                </div>
-            </section>
 
-            <!-- Program Section -->
-            <section class="section">
-                <h2 class="section-header">Program<span class="collapse-icon">−</span></h2>
-                <div class="section-content">
-                <div id="programBlocks" class="program-blocks"></div>
-                <div class="button-group">
-                    <button id="addTextBlock" class="btn btn-secondary">Add Text Block</button>
-                    <button id="addMoveBlock" class="btn btn-primary">Add Move Block</button>
-                </div>
-                </div>
-            </section>
+                <!-- Collapse Toggle Button -->
+                <button id="collapseToggle" class="collapse-toggle" title="Toggle Configuration Panel">
+                    <span class="toggle-icon">◀</span>
+                </button>
 
-            <!-- Actions Section -->
-            <section class="section">
-                <h2 class="section-header">Actions<span class="collapse-icon">−</span></h2>
-                <div class="section-content">
+                <!-- Right Subpanel: Program -->
+                <div class="right-subpanel">
+                    <section class="section program-section">
+                        <h2 class="section-header">Program<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div id="programBlocks" class="program-blocks"></div>
+                        <div class="button-group">
+                            <button id="addTextBlock" class="btn btn-secondary">Add Text Block</button>
+                            <button id="addMoveBlock" class="btn btn-primary">Add Move Block</button>
+                        </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Bottom Actions Bar -->
+            <div class="bottom-actions-bar">
                 <div class="form-group">
                     <label for="planDate">Plan Date:</label>
                     <input type="date" id="planDate">
@@ -141,8 +151,7 @@
                     <button id="printBtn" class="btn btn-secondary">Print Plan</button>
                 </div>
                 <input type="file" id="importFile" accept=".json" style="display: none;">
-                </div>
-            </section>
+            </div>
         </div>
 
         <!-- Right Panel: Canvas (75%) -->

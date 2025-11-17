@@ -10,7 +10,8 @@ class BlockManager {
         const block = {
             id: this.nextId++,
             type: 'text',
-            content: ''
+            content: '',
+            showPosition: false
         };
         
         this.blocks.push(block);
@@ -117,6 +118,50 @@ class BlockManager {
         return true;
     }
     
+    calculatePositionAtBlock(blockIndex) {
+        // Calculate robot position after executing all move blocks up to this point
+        if (!window.missionPlanner || !window.missionPlanner.pathCalculator || !window.missionPlanner.robot) {
+            return null;
+        }
+        
+        const robotConfig = window.missionPlanner.robot.getConfig();
+        let x = robotConfig.startX;
+        let y = robotConfig.startY;
+        let angle = robotConfig.startAngle;
+        
+        // Process all blocks up to (but not including) the current block
+        for (let i = 0; i < blockIndex && i < this.blocks.length; i++) {
+            const block = this.blocks[i];
+            
+            if (block.type === 'move' && block.valid !== false) {
+                const moveBlock = {
+                    type: 'move',
+                    direction: parseFloat(block.direction) || 0,
+                    degrees: parseFloat(block.degrees) || 0,
+                    valid: this.validateMoveBlock(block)
+                };
+                
+                if (moveBlock.valid) {
+                    const points = window.missionPlanner.pathCalculator.calculateMoveBlock(
+                        x, y, angle,
+                        moveBlock.direction,
+                        moveBlock.degrees,
+                        robotConfig
+                    );
+                    
+                    if (points.length > 0) {
+                        const lastPoint = points[points.length - 1];
+                        x = lastPoint.x;
+                        y = lastPoint.y;
+                        angle = lastPoint.angle;
+                    }
+                }
+            }
+        }
+        
+        return { x, y, angle };
+    }
+    
     renderBlocks() {
         this.container.innerHTML = '';
         
@@ -196,6 +241,35 @@ class BlockManager {
             textarea.rows = 2;
             textarea.oninput = (e) => this.updateBlock(block.id, 'content', e.target.value);
             content.appendChild(textarea);
+            
+            // Add show position checkbox
+            const positionToggle = document.createElement('label');
+            positionToggle.className = 'block-position-toggle';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = block.showPosition || false;
+            checkbox.onchange = (e) => {
+                this.updateBlock(block.id, 'showPosition', e.target.checked);
+                this.renderBlocks();
+            };
+            positionToggle.appendChild(checkbox);
+            const checkboxLabel = document.createElement('span');
+            checkboxLabel.textContent = 'Show Robot Position';
+            positionToggle.appendChild(checkboxLabel);
+            content.appendChild(positionToggle);
+            
+            // Display position info if enabled
+            if (block.showPosition) {
+                const position = this.calculatePositionAtBlock(index);
+                if (position) {
+                    const positionInfo = document.createElement('div');
+                    positionInfo.className = 'block-position-info';
+                    const xInches = (position.x / 2.54).toFixed(1);
+                    const yInches = (position.y / 2.54).toFixed(1);
+                    positionInfo.innerHTML = `Position: X: ${position.x.toFixed(1)}cm (${xInches}in), Y: ${position.y.toFixed(1)}cm (${yInches}in), Angle: ${position.angle.toFixed(0)}°`;
+                    content.appendChild(positionInfo);
+                }
+            }
         } else if (block.type === 'move') {
             const moveInputs = document.createElement('div');
             moveInputs.className = 'block-move-inputs';
@@ -250,7 +324,8 @@ class BlockManager {
             if (block.type === 'text') {
                 return {
                     type: 'text',
-                    content: block.content || ''
+                    content: block.content || '',
+                    showPosition: block.showPosition || false
                 };
             } else if (block.type === 'move') {
                 const direction = parseFloat(block.direction);
@@ -281,7 +356,8 @@ class BlockManager {
                 const newBlock = {
                     id: this.nextId++,
                     type: 'text',
-                    content: block.content || ''
+                    content: block.content || '',
+                    showPosition: block.showPosition || false
                 };
                 this.blocks.push(newBlock);
             } else if (block.type === 'move') {
