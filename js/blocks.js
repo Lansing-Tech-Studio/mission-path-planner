@@ -92,8 +92,25 @@ class BlockManager {
             if (blockId === id) {
                 if (isValid === false) {
                     el.classList.add('invalid');
+                    // Add error message if it doesn't exist
+                    const content = el.querySelector('.block-content');
+                    if (content && !content.querySelector('.block-error-helper')) {
+                        const helper = document.createElement('small');
+                        helper.className = 'block-error-helper';
+                        helper.style.color = '#d32f2f';
+                        helper.style.fontSize = '10px';
+                        helper.style.marginTop = '4px';
+                        helper.style.display = 'block';
+                        helper.textContent = 'Direction must be between an integer -100 and 100.';
+                        content.appendChild(helper);
+                    }
                 } else {
                     el.classList.remove('invalid');
+                    // Remove error message if it exists
+                    const errorHelper = el.querySelector('.block-error-helper');
+                    if (errorHelper) {
+                        errorHelper.remove();
+                    }
                 }
             }
         });
@@ -277,14 +294,25 @@ class BlockManager {
             // Direction input
             const directionGroup = document.createElement('div');
             const directionLabel = document.createElement('label');
-            directionLabel.textContent = 'Direction (-100 to 100):';
+            directionLabel.textContent = 'Direction:';
+            directionLabel.title = '0 = straight, -1 to -100 = left, 1 to 100 = right';
             const directionInput = document.createElement('input');
             directionInput.type = 'number';
             directionInput.value = block.direction || 0;
             directionInput.min = -100;
             directionInput.max = 100;
             directionInput.step = 1;
-            directionInput.oninput = (e) => this.updateBlock(block.id, 'direction', e.target.value);
+            directionInput.title = '0 = straight, -1 to -100 = left, 1 to 100 = right';
+            directionInput.oninput = (e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                this.updateBlock(block.id, 'direction', isNaN(value) ? 0 : value);
+            };
+            directionInput.onblur = (e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                const intValue = isNaN(value) ? 0 : value;
+                e.target.value = intValue;
+                this.updateBlock(block.id, 'direction', intValue);
+            };
             directionGroup.appendChild(directionLabel);
             directionGroup.appendChild(directionInput);
             
@@ -292,10 +320,12 @@ class BlockManager {
             const degreesGroup = document.createElement('div');
             const degreesLabel = document.createElement('label');
             degreesLabel.textContent = 'Degrees:';
+            degreesLabel.title = 'Positive degrees = forward, negative degrees = backup';
             const degreesInput = document.createElement('input');
             degreesInput.type = 'number';
             degreesInput.value = block.degrees || 360;
             degreesInput.step = 1;
+            degreesInput.title = 'Positive degrees = forward, negative degrees = backup';
             degreesInput.oninput = (e) => this.updateBlock(block.id, 'degrees', e.target.value);
             degreesGroup.appendChild(degreesLabel);
             degreesGroup.appendChild(degreesInput);
@@ -304,13 +334,17 @@ class BlockManager {
             moveInputs.appendChild(degreesGroup);
             content.appendChild(moveInputs);
             
-            // Show helper text
-            const helper = document.createElement('small');
-            helper.style.color = '#666';
-            helper.style.fontSize = '10px';
-            helper.style.marginTop = '4px';
-            helper.textContent = '0 = straight, negative = left, positive = right. Negative degrees = backup';
-            content.appendChild(helper);
+            // Show helper text only when there's an error
+            if (block.valid === false) {
+                const helper = document.createElement('small');
+                helper.className = 'block-error-helper';
+                helper.style.color = '#d32f2f';
+                helper.style.fontSize = '10px';
+                helper.style.marginTop = '4px';
+                helper.style.display = 'block';
+                helper.textContent = '0 = straight, negative = left, positive = right. Negative degrees = backup';
+                content.appendChild(helper);
+            }
         }
         
         div.appendChild(content);
