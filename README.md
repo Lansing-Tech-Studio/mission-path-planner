@@ -1,5 +1,7 @@
 # Mission Path Planner
 
+![CI](https://github.com/Lansing-Tech-Studio/mission-path-planner/actions/workflows/test.yml/badge.svg)
+
 A web-based application for planning and visualizing robot paths for FIRST LEGO League (FLL) Challenge missions using Spike Prime robots.
 
 ## Features
@@ -31,6 +33,7 @@ A web-based application for planning and visualizing robot paths for FIRST LEGO 
 - **Wheel Offset**: Distance from back of robot to wheel axle (cm)
 - **Wheel Circumference**: Circumference of your wheels (cm)
 - **Wheel Base**: Distance between left and right wheel centers (cm)
+  - Note: Wheel base must be at least 8 cm
 - **Robot Image** (optional): URL to an image of your robot
 
 ### 4. Set Starting Position
@@ -70,6 +73,29 @@ The path calculation uses wheel circumference and wheel base to accurately simul
 - Compatible with GitHub Pages
 - Canvas-based rendering for smooth visualization
 - JSON-based configuration for easy sharing
+
+## Testing
+
+- **Install dependencies**: `npm ci`
+- **Install Playwright browser (first time only)**: `npx playwright install chromium`
+- **Run all unit tests**: `npm run test:unit`
+- **Run all e2e tests**: `npm run test:e2e`
+- **Run unit tests with coverage**: `npm run coverage`
+- **Full CI-like run (unit + e2e)**: `npm run test:ci`
+
+Coverage thresholds enforced by Jest:
+
+- Branches: 60%
+- Functions: 70%
+- Lines: 75%
+- Statements: 75%
+
+
+## Development
+
+- **Start local dev server**: `npm run dev`
+  - Serves the app for manual testing and Playwright runs
+  - Base URL typically `http://localhost:5173`
 
 ## File Structure
 

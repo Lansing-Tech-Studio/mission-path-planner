@@ -220,3 +220,11 @@ class PrintManager {
         return div.innerHTML;
     }
 }
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.PrintManager = PrintManager;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PrintManager;
+}
