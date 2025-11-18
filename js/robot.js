@@ -12,6 +12,66 @@ class RobotConfig {
             startY: 3.3,
             startAngle: 0
         };
+        
+        // Robot presets library
+        this.presets = {
+            'dadbot': {
+                name: 'DadBot',
+                length: 16.5,
+                width: 15,
+                wheelOffset: 3.1,
+                wheelCircumference: 19.6,
+                wheelBase: 13.3,
+                imageUrl: 'img/DadBot.png'
+            },
+            'coopbot': {
+                name: 'Coop Bot (Arvind Seshan)',
+                length: 12,
+                width: 13.6,
+                wheelOffset: 4,
+                wheelCircumference: 17.5,
+                wheelBase: 10.4,
+                imageUrl: 'img/coop-bot.png'
+            },
+            'lego-advanced': {
+                name: 'LEGO Advanced Driving Base',
+                length: 20,
+                width: 16.8,
+                wheelOffset: 8.8,
+                wheelCircumference: 27.6,
+                wheelBase: 13.6,
+                imageUrl: 'img/advanced-driving-base.png'
+            }
+        };
+    }
+    
+    getPresets() {
+        return this.presets;
+    }
+    
+    loadPreset(presetId) {
+        const preset = this.presets[presetId];
+        if (preset) {
+            // Load preset but keep current starting position
+            const currentStartX = document.getElementById('startX').value;
+            const currentStartY = document.getElementById('startY').value;
+            const currentStartAngle = document.getElementById('startAngle').value;
+            
+            this.loadConfig({
+                length: preset.length,
+                width: preset.width,
+                wheelOffset: preset.wheelOffset,
+                wheelCircumference: preset.wheelCircumference,
+                wheelBase: preset.wheelBase,
+                imageUrl: preset.imageUrl,
+                startX: currentStartX !== '' ? parseFloat(currentStartX) : 33,
+                startY: currentStartY !== '' ? parseFloat(currentStartY) : 3.3,
+                startAngle: currentStartAngle !== '' ? parseFloat(currentStartAngle) : 0
+            });
+            
+            return true;
+        }
+        return false;
     }
     
     getConfig() {

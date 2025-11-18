@@ -38,6 +38,46 @@
                         </div>
                     </section>
 
+                    <!-- Robot Configuration Section -->
+                    <section class="section">
+                        <h2 class="section-header">Robot Configuration<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="robotPreset">Load Preset:</label>
+                            <select id="robotPreset">
+                                <option value="">-- Select a Robot --</option>
+                                <option value="dadbot">DadBot</option>
+                                <option value="coopbot">Coop Bot (Arvind Seshan)</option>
+                                <option value="lego-advanced">LEGO Advanced Driving Base</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="robotLength">Length (cm):</label>
+                            <input type="number" id="robotLength" value="16.5" min="1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="robotWidth">Width (cm):</label>
+                            <input type="number" id="robotWidth" value="15" min="1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelOffset">Wheel Offset from Back (cm):</label>
+                            <input type="number" id="wheelOffset" value="3.1" min="0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelCircumference">Wheel Circumference (cm):</label>
+                            <input type="number" id="wheelCircumference" value="19.6" min="0.1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="wheelBase">Wheel Base (cm):</label>
+                            <input type="number" id="wheelBase" value="13.3" min="0.1" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="robotImageUrl">Robot Image URL (optional):</label>
+                            <input type="url" id="robotImageUrl" value="img/DadBot.png" placeholder="https://...">
+                        </div>
+                        </div>
+                    </section>
+
                     <!-- Mat Selection Section -->
                     <section class="section">
                         <h2 class="section-header">Mission Mat<span class="collapse-icon">−</span></h2>
@@ -62,37 +102,6 @@
                                 <option value="centered">Centered</option>
                                 <option value="right">Right-Aligned (Single Home)</option>
                             </select>
-                        </div>
-                        </div>
-                    </section>
-
-                    <!-- Robot Configuration Section -->
-                    <section class="section">
-                        <h2 class="section-header">Robot Configuration<span class="collapse-icon">−</span></h2>
-                        <div class="section-content">
-                        <div class="form-group">
-                            <label for="robotLength">Length (cm):</label>
-                            <input type="number" id="robotLength" value="16.5" min="1" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="robotWidth">Width (cm):</label>
-                            <input type="number" id="robotWidth" value="15" min="1" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="wheelOffset">Wheel Offset from Back (cm):</label>
-                            <input type="number" id="wheelOffset" value="3.1" min="0" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="wheelCircumference">Wheel Circumference (cm):</label>
-                            <input type="number" id="wheelCircumference" value="19.6" min="0.1" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="wheelBase">Wheel Base (cm):</label>
-                            <input type="number" id="wheelBase" value="13.3" min="0.1" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="robotImageUrl">Robot Image URL (optional):</label>
-                            <input type="url" id="robotImageUrl" value="img/DadBot.png" placeholder="https://...">
                         </div>
                         </div>
                     </section>

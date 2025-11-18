@@ -62,6 +62,17 @@ class MissionPlanner {
             });
         });
         
+        // Robot preset selection
+        const robotPreset = document.getElementById('robotPreset');
+        if (robotPreset) {
+            robotPreset.addEventListener('change', () => {
+                if (robotPreset.value) {
+                    this.robot.loadPreset(robotPreset.value);
+                    this.update();
+                }
+            });
+        }
+        
         // Robot configuration changes
         const robotInputs = [
             'robotLength', 'robotWidth', 'wheelOffset', 
@@ -72,7 +83,13 @@ class MissionPlanner {
         robotInputs.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
-                element.addEventListener('input', () => this.update());
+                element.addEventListener('input', () => {
+                    // Reset preset selection when manual changes are made
+                    if (robotPreset) {
+                        robotPreset.value = '';
+                    }
+                    this.update();
+                });
             }
         });
         
