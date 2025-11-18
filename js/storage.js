@@ -130,3 +130,11 @@ class StorageManager {
         }
     }
 }
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.StorageManager = StorageManager;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = StorageManager;
+}

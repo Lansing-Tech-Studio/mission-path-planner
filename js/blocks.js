@@ -446,3 +446,11 @@ class BlockManager {
         this.renderBlocks();
     }
 }
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.BlockManager = BlockManager;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = BlockManager;
+}

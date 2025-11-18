@@ -258,3 +258,11 @@ class PathCalculator {
         return points;
     }
 }
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.PathCalculator = PathCalculator;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = PathCalculator;
+}

@@ -80,13 +80,20 @@ class RobotConfig {
         const startYValue = document.getElementById('startY').value;
         const startAngleValue = document.getElementById('startAngle').value;
         
+        const lengthVal = document.getElementById('robotLength').value;
+        const widthVal = document.getElementById('robotWidth').value;
+        const wheelOffsetVal = document.getElementById('wheelOffset').value;
+        const wheelCircumferenceVal = document.getElementById('wheelCircumference').value;
+        const wheelBaseVal = document.getElementById('wheelBase').value;
+        const imageUrlVal = document.getElementById('robotImageUrl').value;
+        
         return {
-            length: parseFloat(document.getElementById('robotLength').value) || 20,
-            width: parseFloat(document.getElementById('robotWidth').value) || 15,
-            wheelOffset: parseFloat(document.getElementById('wheelOffset').value) || 5,
-            wheelCircumference: parseFloat(document.getElementById('wheelCircumference').value) || 17.6,
-            wheelBase: parseFloat(document.getElementById('wheelBase').value) || 12,
-            imageUrl: document.getElementById('robotImageUrl').value || '',
+            length: lengthVal === '' ? 20 : parseFloat(lengthVal),
+            width: widthVal === '' ? 15 : parseFloat(widthVal),
+            wheelOffset: wheelOffsetVal === '' ? 5 : parseFloat(wheelOffsetVal),
+            wheelCircumference: wheelCircumferenceVal === '' ? 17.6 : parseFloat(wheelCircumferenceVal),
+            wheelBase: wheelBaseVal === '' ? 12 : parseFloat(wheelBaseVal),
+            imageUrl: imageUrlVal || '',
             startX: startXValue !== '' ? parseFloat(startXValue) : 30,
             startY: startYValue !== '' ? parseFloat(startYValue) : 30,
             startAngle: startAngleValue !== '' ? parseFloat(startAngleValue) : 0
@@ -134,11 +141,19 @@ class RobotConfig {
         if (config.width <= 0) errors.push('Robot width must be positive');
         if (config.wheelOffset < 0) errors.push('Wheel offset cannot be negative (tire overhang should be considered in robot length)');
         if (config.wheelCircumference <= 0) errors.push('Wheel circumference must be positive');
-        if (config.wheelBase <= 0) errors.push('Wheel base must be positive');
+        if (config.wheelBase < 8) errors.push('Wheel base must be at least 8 cm');
         
         return {
             valid: errors.length === 0,
             errors: errors
         };
     }
+}
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.RobotConfig = RobotConfig;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = RobotConfig;
 }
