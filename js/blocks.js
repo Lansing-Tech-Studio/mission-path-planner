@@ -273,29 +273,15 @@ class BlockManager {
             div.classList.add('invalid');
         }
         
-        // Add drag event listeners
+        // Add drag event listeners (drag from anywhere on the block)
         div.addEventListener('dragstart', (e) => this.handleDragStart(e, block.id));
         div.addEventListener('dragend', (e) => this.handleDragEnd(e));
         
-        // Block header with type and drag handle
-        const header = document.createElement('div');
-        header.className = 'block-header';
-        
-        const dragHandle = document.createElement('span');
-        dragHandle.className = 'drag-handle';
-        dragHandle.textContent = '⋮⋮';
-        dragHandle.style.cursor = 'grab';
-        dragHandle.style.marginRight = '8px';
-        dragHandle.style.color = '#999';
-        dragHandle.style.userSelect = 'none';
-        header.appendChild(dragHandle);
-        
-        const typeLabel = document.createElement('span');
-        typeLabel.className = 'block-type';
-        typeLabel.textContent = block.type === 'text' ? 'Text/Comment' : 'Move';
-        header.appendChild(typeLabel);
-        
-        div.appendChild(header);
+        // Left vertical drag rail (purely visual, whole block is draggable)
+        const dragRail = document.createElement('div');
+        dragRail.className = 'drag-rail';
+        dragRail.title = 'Drag to reorder';
+        div.appendChild(dragRail);
         
         // Block content
         const content = document.createElement('div');

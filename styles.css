@@ -293,22 +293,59 @@ body {
     background-color: white;
     border: 2px solid #ddd;
     border-radius: 6px;
-    padding: 10px;
+    padding: 10px 10px 10px 22px; /* extra left padding for wider drag rail */
     margin-bottom: 8px;
     position: relative;
 }
 
 .program-block.text-block {
     border-color: #9E9E9E;
+    background-color: #fafafa; /* subtle neutral background */
 }
 
 .program-block.move-block {
     border-color: #4CAF50;
+    background-color: #f7fbf7; /* subtle green-tinted background */
 }
 
 .program-block.invalid {
     border-color: #f44336;
     background-color: #ffebee;
+}
+
+/* Vertical drag rail on the left side of each block */
+.drag-rail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    cursor: grab;
+    background: repeating-linear-gradient(
+        to right,
+        #d0d0d0,
+        #d0d0d0 4px,
+        #e8e8e8 4px,
+        #e8e8e8 8px
+    );
+}
+
+/* Green-themed drag rail for move blocks */
+.program-block.move-block .drag-rail {
+    background: repeating-linear-gradient(
+        to right,
+        #A5D6A7,
+        #A5D6A7 4px,
+        #C8E6C9 4px,
+        #C8E6C9 8px
+    );
+}
+
+/* Match grabbing cursor while dragging */
+.program-block.dragging .drag-rail {
+    cursor: grabbing;
 }
 
 .program-block.dragging {
