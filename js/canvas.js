@@ -850,3 +850,11 @@ class CanvasRenderer {
         img.src = url;
     }
 }
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.CanvasRenderer = CanvasRenderer;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CanvasRenderer;
+}

@@ -157,4 +157,63 @@ describe('BlockManager', () => {
       expect(blockManager.blocks.length).toBe(0);
     });
   });
+
+  describe('moveBlock', () => {
+    it('should move a block from one position to another', () => {
+      blockManager.addTextBlock();
+      blockManager.blocks[0].content = 'Block 1';
+      blockManager.addTextBlock();
+      blockManager.blocks[1].content = 'Block 2';
+      blockManager.addTextBlock();
+      blockManager.blocks[2].content = 'Block 3';
+      
+      blockManager.moveBlock(0, 2);
+      
+      expect(blockManager.blocks[0].content).toBe('Block 2');
+      expect(blockManager.blocks[1].content).toBe('Block 3');
+      expect(blockManager.blocks[2].content).toBe('Block 1');
+    });
+
+    it('should not move block if fromIndex equals toIndex', () => {
+      blockManager.addTextBlock();
+      blockManager.blocks[0].content = 'Block 1';
+      
+      blockManager.moveBlock(0, 0);
+      
+      expect(blockManager.blocks[0].content).toBe('Block 1');
+    });
+
+    it('should not move block if toIndex is out of bounds', () => {
+      blockManager.addTextBlock();
+      blockManager.blocks[0].content = 'Block 1';
+      
+      blockManager.moveBlock(0, -1);
+      expect(blockManager.blocks.length).toBe(1);
+      
+      blockManager.moveBlock(0, 5);
+      expect(blockManager.blocks.length).toBe(1);
+    });
+  });
+
+  describe('validateMoveBlock edge cases', () => {
+    it('should validate block with positive small direction', () => {
+      const block = { direction: 0.1, degrees: 360 };
+      expect(blockManager.validateMoveBlock(block)).toBe(true);
+    });
+
+    it('should validate block with negative small direction', () => {
+      const block = { direction: -0.1, degrees: 360 };
+      expect(blockManager.validateMoveBlock(block)).toBe(true);
+    });
+
+    it('should validate block with small positive degrees', () => {
+      const block = { direction: 50, degrees: 0.1 };
+      expect(blockManager.validateMoveBlock(block)).toBe(true);
+    });
+
+    it('should validate block with large degrees', () => {
+      const block = { direction: 50, degrees: 10000 };
+      expect(blockManager.validateMoveBlock(block)).toBe(true);
+    });
+  });
 });

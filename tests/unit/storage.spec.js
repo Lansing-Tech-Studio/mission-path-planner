@@ -139,5 +139,151 @@ describe('StorageManager', () => {
       expect(blob).toBeInstanceOf(Blob);
       expect(blob.type).toBe('application/json');
     });
+
+    it('should use default filename when teamInfo is missing', () => {
+      const data = { program: [] };
+      
+      const appendChildSpy = jest.spyOn(document.body, 'appendChild');
+      
+      storage.exportJSON(data);
+      
+      const anchor = appendChildSpy.mock.calls[0][0];
+      expect(anchor.download).toMatch(/^mission-plan-\d{4}-\d{2}-\d{2}\.json$/);
+    });
+  });
+
+  describe('importJSON', () => {
+    it('should handle missing file', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      storage.importJSON(null, jest.fn());
+      
+      expect(consoleSpy).toHaveBeenCalledWith('No file provided');
+      consoleSpy.mockRestore();
+    });
+
+    it('should import valid JSON file', (done) => {
+      const validData = {
+        teamInfo: { name: 'Test Team' },
+        robot: { length: 20 },
+        program: []
+      };
+      
+      const file = new Blob([JSON.stringify(validData)], { type: 'application/json' });
+      
+      const callback = jest.fn((data) => {
+        expect(data).toEqual(validData);
+        done();
+      });
+      
+      storage.importJSON(file, callback);
+    });
+
+    it('should reject invalid JSON file', (done) => {
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      const file = new Blob(['invalid json'], { type: 'application/json' });
+      
+      const callback = jest.fn();
+      
+      storage.importJSON(file, callback);
+      
+      setTimeout(() => {
+        expect(alertSpy).toHaveBeenCalledWith('Error reading configuration file. Please ensure it is a valid JSON file.');
+        expect(callback).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
+        done();
+      }, 100);
+    });
+
+    it('should reject file with invalid data structure', (done) => {
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      const invalidData = { random: 'data' };
+      const file = new Blob([JSON.stringify(invalidData)], { type: 'application/json' });
+      
+      const callback = jest.fn();
+      
+      storage.importJSON(file, callback);
+      
+      setTimeout(() => {
+        expect(alertSpy).toHaveBeenCalledWith('Invalid configuration file. Please check the file format.');
+        expect(callback).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
+        done();
+      }, 100);
+    });
+
+    it('should handle file reading errors', (done) => {
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      
+      // Create a mock file that will trigger an error
+      const file = new Blob(['test'], { type: 'application/json' });
+      const originalReadAsText = FileReader.prototype.readAsText;
+      
+      FileReader.prototype.readAsText = function() {
+        setTimeout(() => {
+          if (this.onerror) {
+            this.onerror();
+          }
+        }, 10);
+      };
+      
+      const callback = jest.fn();
+      
+      storage.importJSON(file, callback);
+      
+      setTimeout(() => {
+        expect(alertSpy).toHaveBeenCalledWith('Error reading file. Please try again.');
+        FileReader.prototype.readAsText = originalReadAsText;
+        alertSpy.mockRestore();
+        done();
+      }, 100);
+    });
+  });
+
+  describe('edge cases and error handling', () => {
+    it('should handle localStorage quota exceeded', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      // Mock localStorage.setItem to throw an error
+      const originalSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = jest.fn(() => {
+        throw new Error('Quota exceeded');
+      });
+      
+      const data = { test: 'value' };
+      storage.saveToLocalStorage(data);
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Error saving to local storage:', expect.any(Error));
+      
+      Storage.prototype.setItem = originalSetItem;
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle corrupted localStorage data', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      localStorage.setItem('missionPlannerState', 'invalid json');
+      
+      const result = storage.loadFromLocalStorage();
+      
+      expect(result).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith('Error loading from local storage:', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle localStorage clear errors', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      
+      const originalRemoveItem = Storage.prototype.removeItem;
+      Storage.prototype.removeItem = jest.fn(() => {
+        throw new Error('Cannot remove item');
+      });
+      
+      storage.clearLocalStorage();
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Error clearing local storage:', expect.any(Error));
+      
+      Storage.prototype.removeItem = originalRemoveItem;
+      consoleSpy.mockRestore();
+    });
   });
 });

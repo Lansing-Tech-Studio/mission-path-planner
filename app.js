@@ -235,3 +235,11 @@ class MissionPlanner {
 document.addEventListener('DOMContentLoaded', () => {
     window.missionPlanner = new MissionPlanner();
 });
+
+// Expose for browser global & Node (tests)
+if (typeof window !== 'undefined') {
+    window.MissionPlanner = MissionPlanner;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MissionPlanner;
+}
