@@ -90,7 +90,6 @@ Coverage thresholds enforced by Jest:
 - Lines: 75%
 - Statements: 75%
 
-
 ## Development
 
 - **Start local dev server**: `npm run dev`
