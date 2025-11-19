@@ -131,7 +131,11 @@ Works in all modern browsers that support:
 
 ## License
 
-This project is created for FLL teams to help with mission planning. Feel free to use and modify as needed.
+Licensed under the GNU General Public License v3.0 (GPL-3.0-only). See `LICENSE` for full terms.
+
+- You may copy, modify, and distribute this project under GPLv3.
+- Distributions and derivatives must remain under GPLv3 with source available.
+- This software is provided without any warranty (see the license for details).
 
 ## Contributing
 
