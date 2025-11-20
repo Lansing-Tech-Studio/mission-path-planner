@@ -9,7 +9,9 @@ class PathCalculator {
             return { points: [], valid: true };
         }
         
-        // Starting position: convert bottom-left corner coordinates to axle center
+        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
+        // (minimum X and minimum Y of the robot rectangle)
+        // Convert to axle center for path calculations
         // At 0° (facing up): back is at bottom, front is at top
         // Axle is wheelOffset from back, centered horizontally
         let x = robotConfig.startX + robotConfig.width / 2;

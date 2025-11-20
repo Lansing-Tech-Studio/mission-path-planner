@@ -175,9 +175,12 @@ describe('PathCalculator', () => {
       expect(result.valid).toBe(true);
       expect(result.points.length).toBeGreaterThan(10);
       
-      // First point should be at start
-      expect(result.points[0].x).toBeCloseTo(robotConfig.startX, 1);
-      expect(result.points[0].y).toBeCloseTo(robotConfig.startY, 1);
+      // First point should be at axle center (startX/startY is bounding box corner)
+      // Axle center = (startX + width/2, startY + wheelOffset)
+      const expectedX = robotConfig.startX + robotConfig.width / 2; // 30 + 15/2 = 37.5
+      const expectedY = robotConfig.startY + robotConfig.wheelOffset; // 30 + 5 = 35
+      expect(result.points[0].x).toBeCloseTo(expectedX, 1);
+      expect(result.points[0].y).toBeCloseTo(expectedY, 1);
     });
   });
 });

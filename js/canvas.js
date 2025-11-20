@@ -8,10 +8,12 @@ class CanvasRenderer {
         this.tableWidth = 243.84; // cm (96 inches / 8 feet)
         this.tableHeight = 121.92; // cm (48 inches / 4 feet)
         
-        // Mat coordinate space is fixed at standard FLL mat dimensions (240cm x 120cm)
+        // Mat coordinate space is fixed at standard FLL mat dimensions (236cm x 114cm)
+        // Coordinate system: (0, 0) is at the lower-left corner of the mat
+        // X increases to the right, Y increases upward
         // This is what user coordinates are relative to
-        this.matCoordWidth = 240; // cm
-        this.matCoordHeight = 120; // cm
+        this.matCoordWidth = 236; // cm (2360mm)
+        this.matCoordHeight = 114; // cm (1140mm)
         
         // Mat visual dimensions (will be adjusted based on image aspect ratio)
         this.matVisualWidth = this.tableWidth; // Will be adjusted when image loads
@@ -93,7 +95,7 @@ class CanvasRenderer {
     }
     
     // Convert canvas pixels back to mat coordinates
-    // Mat coordinates: (0,0) at bottom-left, Y increases upward
+    // Mat coordinate system: (0, 0) at lower-left corner of mat, X right, Y up
     canvasToCoordX(canvasX) {
         const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
         return (canvasX / this.scale - this.matOffsetX) / coordToVisualX;
@@ -110,9 +112,10 @@ class CanvasRenderer {
     }
     
     isPointInRobot(x, y, robotConfig) {
-        // Convert robot bottom-left corner position to axle center
+        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
+        // (minimum X and minimum Y of the robot rectangle)
+        // The axle is at wheelOffset from the back edge, centered horizontally
         // At 0° (facing up): back is at bottom, front is at top
-        // Axle is wheelOffset from back, centered horizontally
         const axleCenterX = robotConfig.startX + robotConfig.width / 2;
         const axleCenterY = robotConfig.startY + robotConfig.wheelOffset;
         
@@ -127,17 +130,20 @@ class CanvasRenderer {
         const localY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
         
         // Check if within robot rectangle (axle at origin)
+        // Use small epsilon for floating point comparison tolerance
+        const epsilon = 1e-10;
         const halfWidth = robotConfig.width / 2;
         const frontEdge = robotConfig.length - robotConfig.wheelOffset;
         const backEdge = -robotConfig.wheelOffset;
         
-        return localX >= backEdge && localX <= frontEdge && 
-               localY >= -halfWidth && localY <= halfWidth;
+        return localX >= (backEdge - epsilon) && localX <= (frontEdge + epsilon) && 
+               localY >= (-halfWidth - epsilon) && localY <= (halfWidth + epsilon);
     }
     
     getRotationHandlePosition(robotConfig) {
         // Calculate rotation handle position in mat coordinates
-        // Convert robot bottom-left corner position to axle center
+        // robotConfig.startX/startY is the robot's bounding box lower-left corner
+        // Convert to axle center for rotation calculations
         const axleCenterX = robotConfig.startX + robotConfig.width / 2;
         const axleCenterY = robotConfig.startY + robotConfig.wheelOffset;
         
@@ -279,8 +285,8 @@ class CanvasRenderer {
         }
     }
     
-    // Convert from mat coordinate space (240cm x 120cm) to canvas pixels
-    // Mat coords: (0,0) at bottom-left, Y increases upward
+    // Convert from mat coordinate space (236cm x 114cm) to canvas pixels
+    // Mat coordinate system: (0, 0) at lower-left corner, X right, Y up
     coordToCanvasX(x) {
         const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
         return (this.matOffsetX + x * coordToVisualX) * this.scale;
@@ -288,10 +294,10 @@ class CanvasRenderer {
     
     coordToCanvasY(y) {
         const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
-        // Mat Y=0 is at bottom, canvas Y=0 is at top
+        // Mat Y=0 is at bottom (lower-left), canvas Y=0 is at top
         // Convert mat coord to table cm from bottom
         const tableCmFromBottom = y * coordToVisualY;
-        // Flip to get table cm from top
+        // Flip to get table cm from top (canvas coordinate)
         const tableCmFromTop = this.tableHeight - tableCmFromBottom;
         // Convert to canvas pixels
         return tableCmFromTop * this.scale;
@@ -472,7 +478,8 @@ class CanvasRenderer {
     drawGhostRobot(robotConfig, x, y, angleDeg, labelNumber) {
         this.ctx.save();
         
-        // x,y are axle center coordinates (from calculatePositionAtBlock)
+        // x, y are axle center coordinates (from calculatePositionAtBlock)
+        // Path calculations use axle center, not the robot's bounding box corner
         const screenX = this.coordToCanvasX(x);
         const screenY = this.coordToCanvasY(y);
         
@@ -694,7 +701,8 @@ class CanvasRenderer {
     drawRobotOutline(robotConfig, x, y, angleDeg) {
         this.ctx.save();
         
-        // x,y are axle center coordinates (from pathCalculator)
+        // x, y are axle center coordinates (from pathCalculator)
+        // Path points use axle center, not the robot's bounding box corner
         const screenX = this.coordToCanvasX(x);
         const screenY = this.coordToCanvasY(y);
         
@@ -723,13 +731,13 @@ class CanvasRenderer {
     drawRobot(robotConfig, x, y, angleDeg, alpha = 1.0) {
         this.ctx.save();
         
-        // If x,y are corner coordinates (from robotConfig.startX/Y), convert to axle center
-        // If from path, they're already axle center
-        // We can detect this by checking if we're drawing the starting position
+        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
+        // Path points (x, y) use axle center coordinates for accurate movement calculations
+        // If drawing the starting position, convert from corner to axle center
         let axleCenterX = x;
         let axleCenterY = y;
         
-        // For starting position, convert bottom-left corner to axle center
+        // For starting position, convert bounding box corner to axle center
         if (x === robotConfig.startX && y === robotConfig.startY) {
             axleCenterX = x + robotConfig.width / 2;
             axleCenterY = y + robotConfig.wheelOffset;
