@@ -8,8 +8,8 @@ class RobotConfig {
             wheelCircumference: 19.6,
             wheelBase: 13.3,
             imageUrl: '',
-            startX: 33,
-            startY: 3.3,
+            startX: 30,  // Bottom-left corner X
+            startY: 0,   // Bottom-left corner Y
             startAngle: 0
         };
         
@@ -64,8 +64,8 @@ class RobotConfig {
                 wheelCircumference: preset.wheelCircumference,
                 wheelBase: preset.wheelBase,
                 imageUrl: preset.imageUrl,
-                startX: currentStartX !== '' ? parseFloat(currentStartX) : 33,
-                startY: currentStartY !== '' ? parseFloat(currentStartY) : 3.3,
+                startX: currentStartX !== '' ? parseFloat(currentStartX) : 30,
+                startY: currentStartY !== '' ? parseFloat(currentStartY) : 0,
                 startAngle: currentStartAngle !== '' ? parseFloat(currentStartAngle) : 0
             });
             
