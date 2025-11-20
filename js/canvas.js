@@ -8,10 +8,12 @@ class CanvasRenderer {
         this.tableWidth = 243.84; // cm (96 inches / 8 feet)
         this.tableHeight = 121.92; // cm (48 inches / 4 feet)
         
-        // Mat coordinate space is fixed at standard FLL mat dimensions (240cm x 120cm)
+        // Mat coordinate space is fixed at standard FLL mat dimensions (236cm x 114cm)
+        // Coordinate system: (0, 0) is at the lower-left corner of the mat
+        // X increases to the right, Y increases upward
         // This is what user coordinates are relative to
-        this.matCoordWidth = 240; // cm
-        this.matCoordHeight = 120; // cm
+        this.matCoordWidth = 236; // cm (2360mm)
+        this.matCoordHeight = 114; // cm (1140mm)
         
         // Mat visual dimensions (will be adjusted based on image aspect ratio)
         this.matVisualWidth = this.tableWidth; // Will be adjusted when image loads
@@ -70,8 +72,14 @@ class CanvasRenderer {
         
         // Update scale and canvas dimensions
         this.scale = scale;
-        this.canvas.width = this.tableWidth * this.scale;
-        this.canvas.height = this.tableHeight * this.scale;
+        const canvasWidth = this.tableWidth * this.scale;
+        const canvasHeight = this.tableHeight * this.scale;
+        
+        // Set both buffer size and CSS size to match (no letterboxing)
+        this.canvas.width = canvasWidth;
+        this.canvas.height = canvasHeight;
+        this.canvas.style.width = canvasWidth + 'px';
+        this.canvas.style.height = canvasHeight + 'px';
         
         // Trigger re-render if mission planner exists
         if (window.missionPlanner) {
@@ -87,6 +95,7 @@ class CanvasRenderer {
     }
     
     // Convert canvas pixels back to mat coordinates
+    // Mat coordinate system: (0, 0) at lower-left corner of mat, X right, Y up
     canvasToCoordX(canvasX) {
         const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
         return (canvasX / this.scale - this.matOffsetX) / coordToVisualX;
@@ -94,13 +103,24 @@ class CanvasRenderer {
     
     canvasToCoordY(canvasY) {
         const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
-        // Flip Y-axis: canvas Y increases downward, but coord Y increases upward from bottom
-        return this.matCoordHeight - ((canvasY / this.scale - this.matOffsetY) / coordToVisualY);
+        // Canvas Y=0 is at top, mat Y=0 is at bottom
+        // Convert canvas pixels to table cm from top, then flip to bottom-up
+        const tableCmFromTop = canvasY / this.scale;
+        const tableCmFromBottom = this.tableHeight - tableCmFromTop;
+        // matOffsetY is always 0 (mat fills full height), so just convert to mat coords
+        return tableCmFromBottom / coordToVisualY;
     }
     
     isPointInRobot(x, y, robotConfig) {
-        const dx = x - robotConfig.startX;
-        const dy = y - robotConfig.startY;
+        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
+        // (minimum X and minimum Y of the robot rectangle)
+        // The axle is at wheelOffset from the back edge, centered horizontally
+        // At 0° (facing up): back is at bottom, front is at top
+        const axleCenterX = robotConfig.startX + robotConfig.width / 2;
+        const axleCenterY = robotConfig.startY + robotConfig.wheelOffset;
+        
+        const dx = x - axleCenterX;
+        const dy = y - axleCenterY;
         
         // Rotate point to robot's local coordinate system
         // Use negative angle for inverse rotation (world to local)
@@ -110,34 +130,36 @@ class CanvasRenderer {
         const localY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
         
         // Check if within robot rectangle (axle at origin)
+        // Use small epsilon for floating point comparison tolerance
+        const epsilon = 1e-10;
         const halfWidth = robotConfig.width / 2;
         const frontEdge = robotConfig.length - robotConfig.wheelOffset;
         const backEdge = -robotConfig.wheelOffset;
         
-        return localX >= backEdge && localX <= frontEdge && 
-               localY >= -halfWidth && localY <= halfWidth;
+        return localX >= (backEdge - epsilon) && localX <= (frontEdge + epsilon) && 
+               localY >= (-halfWidth - epsilon) && localY <= (halfWidth + epsilon);
     }
     
     getRotationHandlePosition(robotConfig) {
         // Calculate rotation handle position in mat coordinates
+        // robotConfig.startX/startY is the robot's bounding box lower-left corner
+        // Convert to axle center for rotation calculations
+        const axleCenterX = robotConfig.startX + robotConfig.width / 2;
+        const axleCenterY = robotConfig.startY + robotConfig.wheelOffset;
+        
         // Add 90° so that 0° points up instead of right
         const angleRad = ((robotConfig.startAngle + 90) * Math.PI) / 180;
         
-        // In drawing: handle is at (rectX + rectW + handleDistance) where:
-        // - rectX + rectW = (length - wheelOffset) * scaleX pixels from robot center
-        // - handleDistance = 45 * (scaleX / this.scale) pixels
-        // Total pixels from center: (length - wheelOffset) * scaleX + 45 * (scaleX / this.scale)
-        // Convert to cm by dividing by scaleX:
-        // = (length - wheelOffset) + 45 * (scaleX / this.scale) / scaleX
-        // = (length - wheelOffset) + 45 / this.scale
+        // In drawing: handle is at (rectX + rectW + 45px)
+        // Convert 45 pixels to cm using coordinate scale
         const scaleX = this.getCoordScaleX();
         const frontOfRobotCm = robotConfig.length - robotConfig.wheelOffset;
-        const handleOffsetCm = 45 / this.scale;
+        const handleOffsetCm = 45 / scaleX; // Convert pixels to cm
         const totalDistanceCm = frontOfRobotCm + handleOffsetCm;
         
-        const handleX = robotConfig.startX + totalDistanceCm * Math.cos(angleRad);
+        const handleX = axleCenterX + totalDistanceCm * Math.cos(angleRad);
         // Y-axis increases upward, so use standard mathematical convention
-        const handleY = robotConfig.startY + totalDistanceCm * Math.sin(angleRad);
+        const handleY = axleCenterY + totalDistanceCm * Math.sin(angleRad);
         
         return { x: handleX, y: handleY };
     }
@@ -155,11 +177,9 @@ class CanvasRenderer {
     
     onMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Account for CSS scaling of canvas
-        const cssScaleX = this.canvas.width / rect.width;
-        const cssScaleY = this.canvas.height / rect.height;
-        const canvasX = (e.clientX - rect.left) * cssScaleX;
-        const canvasY = (e.clientY - rect.top) * cssScaleY;
+        // Canvas buffer size matches CSS size, so no scaling needed
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
         
         const matX = this.canvasToCoordX(canvasX);
         const matY = this.canvasToCoordY(canvasY);
@@ -177,7 +197,7 @@ class CanvasRenderer {
         // Check if clicking on the starting robot
         else if (onRobotBody) {
             this.isDragging = true;
-            // Store the offset from robot center (axle position) to click point
+            // Store the offset from robot corner to click point
             this.dragOffsetX = matX - this.robotConfig.startX;
             this.dragOffsetY = matY - this.robotConfig.startY;
             this.canvas.style.cursor = 'grabbing';
@@ -186,19 +206,19 @@ class CanvasRenderer {
     
     onMouseMove(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Account for CSS scaling of canvas
-        const cssScaleX = this.canvas.width / rect.width;
-        const cssScaleY = this.canvas.height / rect.height;
-        const canvasX = (e.clientX - rect.left) * cssScaleX;
-        const canvasY = (e.clientY - rect.top) * cssScaleY;
+        // Canvas buffer size matches CSS size, so no scaling needed
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
         
         const matX = this.canvasToCoordX(canvasX);
         const matY = this.canvasToCoordY(canvasY);
         
         if (this.isRotating && this.robotConfig) {
-            // Calculate angle from robot center to mouse
-            const dx = matX - this.robotConfig.startX;
-            const dy = matY - this.robotConfig.startY;
+            // Calculate angle from robot axle center to mouse
+            const axleCenterX = this.robotConfig.startX + this.robotConfig.width / 2;
+            const axleCenterY = this.robotConfig.startY + this.robotConfig.wheelOffset;
+            const dx = matX - axleCenterX;
+            const dy = matY - axleCenterY;
             // Y-axis increases upward, use standard mathematical convention
             // Subtract 90° so that 0° points up instead of right
             const angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
@@ -265,7 +285,8 @@ class CanvasRenderer {
         }
     }
     
-    // Convert from mat coordinate space (240cm x 120cm) to canvas pixels
+    // Convert from mat coordinate space (236cm x 114cm) to canvas pixels
+    // Mat coordinate system: (0, 0) at lower-left corner, X right, Y up
     coordToCanvasX(x) {
         const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
         return (this.matOffsetX + x * coordToVisualX) * this.scale;
@@ -273,8 +294,13 @@ class CanvasRenderer {
     
     coordToCanvasY(y) {
         const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
-        // Flip Y-axis: coord Y=0 is at bottom, canvas Y=0 is at top
-        return (this.matOffsetY + (this.matCoordHeight - y) * coordToVisualY) * this.scale;
+        // Mat Y=0 is at bottom (lower-left), canvas Y=0 is at top
+        // Convert mat coord to table cm from bottom
+        const tableCmFromBottom = y * coordToVisualY;
+        // Flip to get table cm from top (canvas coordinate)
+        const tableCmFromTop = this.tableHeight - tableCmFromBottom;
+        // Convert to canvas pixels
+        return tableCmFromTop * this.scale;
     }
     
     // Get scale factor for converting coordinate space dimensions to canvas pixels
@@ -452,13 +478,16 @@ class CanvasRenderer {
     drawGhostRobot(robotConfig, x, y, angleDeg, labelNumber) {
         this.ctx.save();
         
+        // x, y are axle center coordinates (from calculatePositionAtBlock)
+        // Path calculations use axle center, not the robot's bounding box corner
         const screenX = this.coordToCanvasX(x);
         const screenY = this.coordToCanvasY(y);
         
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
         
-        // Rotate to robot angle (negate because Y-axis is flipped)
+        // Rotate to robot angle
+        // Canvas Y points down, but our coords have Y pointing up, so negate
         // Add 90° so that 0° points up instead of right
         this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
         
@@ -672,13 +701,16 @@ class CanvasRenderer {
     drawRobotOutline(robotConfig, x, y, angleDeg) {
         this.ctx.save();
         
+        // x, y are axle center coordinates (from pathCalculator)
+        // Path points use axle center, not the robot's bounding box corner
         const screenX = this.coordToCanvasX(x);
         const screenY = this.coordToCanvasY(y);
         
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
         
-        // Rotate to robot angle (negate because Y-axis is flipped)
+        // Rotate to robot angle
+        // Canvas Y points down, but our coords have Y pointing up, so negate
         // Add 90° so that 0° points up instead of right
         this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
         
@@ -699,13 +731,26 @@ class CanvasRenderer {
     drawRobot(robotConfig, x, y, angleDeg, alpha = 1.0) {
         this.ctx.save();
         
-        const screenX = this.coordToCanvasX(x);
-        const screenY = this.coordToCanvasY(y);
+        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
+        // Path points (x, y) use axle center coordinates for accurate movement calculations
+        // If drawing the starting position, convert from corner to axle center
+        let axleCenterX = x;
+        let axleCenterY = y;
+        
+        // For starting position, convert bounding box corner to axle center
+        if (x === robotConfig.startX && y === robotConfig.startY) {
+            axleCenterX = x + robotConfig.width / 2;
+            axleCenterY = y + robotConfig.wheelOffset;
+        }
+        
+        const screenX = this.coordToCanvasX(axleCenterX);
+        const screenY = this.coordToCanvasY(axleCenterY);
         
         // Translate to robot position
         this.ctx.translate(screenX, screenY);
         
-        // Rotate to robot angle (negate because Y-axis is flipped)
+        // Rotate to robot angle
+        // Canvas Y points down, but our coords have Y pointing up, so negate
         // Add 90° so that 0° points up instead of right
         this.ctx.rotate((-(angleDeg + 90) * Math.PI) / 180);
         
@@ -786,11 +831,10 @@ class CanvasRenderer {
     }
     
     drawRotationHandle(rectX, rectW) {
-        // Draw rotation handle beyond the arrow (in coordinate space: 15cm beyond robot)
-        const scaleX = this.getCoordScaleX();
-        const handleDistance = 45 * (scaleX / this.scale); // Scale the distance proportionally
+        // Draw rotation handle beyond the arrow (fixed pixel distance in canvas space)
+        const handleDistance = 45; // pixels
         const handleX = rectX + rectW + handleDistance;
-        const arrowEnd = rectX + rectW + 25 * (scaleX / this.scale);
+        const arrowEnd = rectX + rectW + 25; // pixels
         
         // Draw connecting line
         this.ctx.strokeStyle = '#FF5722'; // Deep orange

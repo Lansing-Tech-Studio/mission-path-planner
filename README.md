@@ -149,6 +149,22 @@ This is an educational tool for FLL teams. Suggestions and improvements are welc
 4. **Print for Meetings**: Use the print feature to document progress and share with mentors
 5. **Custom Mats**: Take a photo of your practice mat for the most accurate planning
 
+## Unit Conversion Reference
+
+- 1 inch = 2.54 cm
+- 1 cm = 0.3937 inches
+- 1 LEGO stud = 0.8 cm
+- standard FLL mat size (with 2 home areas) = 2360 × 1140 mm
+- standard FLL table size (inner; exclusive of side/bumper pieces) = 93 in x 45 in = 2362.2 mm x 1143 mm
+- Spike Prime wheel circumference (standard wheels) = 17.5 cm
+- Spike Prime wheel circumference (large wheels) = 27.6 cm
+- LEGO 62.4mm tire circumference = 19.6 cm
+  - tire size is given as diameter; circumference = diameter × π
+- rotations to degrees: 1 rotation = 360 degrees
+- degrees to rotations: 1 degree = 1/360 rotations
+- cm to rotations: rotations = distance(cm) / wheel circumference(cm)
+- rotations to cm: distance(cm) = rotations × wheel circumference(cm)
+
 ## Support
 
 For FLL-specific questions, refer to the official FIRST website: <https://www.firstinspires.org/>
