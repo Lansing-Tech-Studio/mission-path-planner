@@ -150,11 +150,22 @@ class CanvasRenderer {
         // Add 90° so that 0° points up instead of right
         const angleRad = ((robotConfig.startAngle + 90) * Math.PI) / 180;
         
-        // In drawing: handle is at (rectX + rectW + 45px)
-        // Convert 45 pixels to cm using coordinate scale
+        // In drawing: handle is at (rectX + rectW + 45px) in rotated canvas space
+        // The 45-pixel offset is in the robot's local coordinate frame
+        // Convert to mat coordinates accounting for non-uniform scaling
         const scaleX = this.getCoordScaleX();
+        const scaleY = this.getCoordScaleY();
+        
+        // Calculate effective scale along the robot's forward direction
+        // This accounts for aspect ratio by considering both X and Y components
+        const cosAngle = Math.cos(angleRad);
+        const sinAngle = Math.sin(angleRad);
+        const effectiveScale = Math.sqrt(
+            (cosAngle * scaleX) ** 2 + (sinAngle * scaleY) ** 2
+        );
+        
         const frontOfRobotCm = robotConfig.length - robotConfig.wheelOffset;
-        const handleOffsetCm = 45 / scaleX; // Convert pixels to cm
+        const handleOffsetCm = 45 / effectiveScale; // Convert pixels to cm using effective scale
         const totalDistanceCm = frontOfRobotCm + handleOffsetCm;
         
         const handleX = axleCenterX + totalDistanceCm * Math.cos(angleRad);
@@ -171,7 +182,7 @@ class CanvasRenderer {
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         // Click radius in cm - made larger for easier clicking
-        const handleRadiusCm = 6.0; // 3cm click radius
+        const handleRadiusCm = 3.0; // 3cm click radius
         return distance <= handleRadiusCm;
     }
     

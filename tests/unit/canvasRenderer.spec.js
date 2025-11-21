@@ -277,6 +277,139 @@ describe('CanvasRenderer', () => {
     expect(renderer.matOffsetX).toBeGreaterThan(centeredOffset);
   });
 
+  describe('Rotation handle position with aspect ratio', () => {
+    it('positions handle correctly at 0° (north) with non-square aspect ratio', () => {
+      renderer.matVisualWidth = renderer.tableWidth;
+      renderer.matVisualHeight = renderer.tableHeight;
+      renderer.updateMatAlignment('centered');
+      
+      const robot = { 
+        length: 20, 
+        width: 15, 
+        wheelOffset: 3, 
+        startX: 100, 
+        startY: 50, 
+        startAngle: 0
+      };
+      
+      const handle = renderer.getRotationHandlePosition(robot);
+      const axleCenterX = robot.startX + robot.width / 2;
+      const axleCenterY = robot.startY + robot.wheelOffset;
+      
+      expect(handle.x).toBeCloseTo(axleCenterX, 2);
+      expect(handle.y).toBeGreaterThan(axleCenterY);
+      expect(renderer.isPointInRotationHandle(handle.x, handle.y, robot)).toBe(true);
+    });
+    
+    it('positions handle correctly at 90° (west - counterclockwise)', () => {
+      renderer.matVisualWidth = renderer.tableWidth;
+      renderer.matVisualHeight = renderer.tableHeight;
+      renderer.updateMatAlignment('centered');
+      
+      const robot = { 
+        length: 20, 
+        width: 15, 
+        wheelOffset: 3, 
+        startX: 100, 
+        startY: 50, 
+        startAngle: 90
+      };
+      
+      const handle = renderer.getRotationHandlePosition(robot);
+      const axleCenterX = robot.startX + robot.width / 2;
+      const axleCenterY = robot.startY + robot.wheelOffset;
+      
+      // At 90° (counterclockwise from north), robot faces west (left), handle is further left
+      expect(handle.y).toBeCloseTo(axleCenterY, 2);
+      expect(handle.x).toBeLessThan(axleCenterX);
+      expect(renderer.isPointInRotationHandle(handle.x, handle.y, robot)).toBe(true);
+    });
+    
+    it('positions handle correctly at 180° (south)', () => {
+      renderer.matVisualWidth = renderer.tableWidth;
+      renderer.matVisualHeight = renderer.tableHeight;
+      renderer.updateMatAlignment('centered');
+      
+      const robot = { 
+        length: 20, 
+        width: 15, 
+        wheelOffset: 3, 
+        startX: 100, 
+        startY: 50, 
+        startAngle: 180
+      };
+      
+      const handle = renderer.getRotationHandlePosition(robot);
+      const axleCenterX = robot.startX + robot.width / 2;
+      const axleCenterY = robot.startY + robot.wheelOffset;
+      
+      expect(handle.x).toBeCloseTo(axleCenterX, 2);
+      expect(handle.y).toBeLessThan(axleCenterY);
+      expect(renderer.isPointInRotationHandle(handle.x, handle.y, robot)).toBe(true);
+    });
+    
+    it('positions handle correctly at 270° (east - counterclockwise)', () => {
+      renderer.matVisualWidth = renderer.tableWidth;
+      renderer.matVisualHeight = renderer.tableHeight;
+      renderer.updateMatAlignment('centered');
+      
+      const robot = { 
+        length: 20, 
+        width: 15, 
+        wheelOffset: 3, 
+        startX: 100, 
+        startY: 50, 
+        startAngle: 270
+      };
+      
+      const handle = renderer.getRotationHandlePosition(robot);
+      const axleCenterX = robot.startX + robot.width / 2;
+      const axleCenterY = robot.startY + robot.wheelOffset;
+      
+      // At 270° (counterclockwise from north), robot faces east (right), handle is further right
+      expect(handle.y).toBeCloseTo(axleCenterY, 2);
+      expect(handle.x).toBeGreaterThan(axleCenterX);
+      expect(renderer.isPointInRotationHandle(handle.x, handle.y, robot)).toBe(true);
+    });
+    
+    it('maintains consistent handle distance across all angles', () => {
+      renderer.matVisualWidth = renderer.tableWidth;
+      renderer.matVisualHeight = renderer.tableHeight;
+      renderer.updateMatAlignment('centered');
+      
+      const robot = { 
+        length: 20, 
+        width: 15, 
+        wheelOffset: 3, 
+        startX: 100, 
+        startY: 50, 
+        startAngle: 0
+      };
+      
+      const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+      const distances = [];
+      
+      angles.forEach(angle => {
+        robot.startAngle = angle;
+        const handle = renderer.getRotationHandlePosition(robot);
+        const axleCenterX = robot.startX + robot.width / 2;
+        const axleCenterY = robot.startY + robot.wheelOffset;
+        
+        const dx = handle.x - axleCenterX;
+        const dy = handle.y - axleCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        distances.push(distance);
+        
+        expect(renderer.isPointInRotationHandle(handle.x, handle.y, robot)).toBe(true);
+      });
+      
+      const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
+      distances.forEach(distance => {
+        expect(Math.abs(distance - avgDistance) / avgDistance).toBeLessThan(0.05);
+      });
+    });
+  });
+
   it('draws path points and handles empty errors array', () => {
     const robot = { length: 20, width: 15, wheelOffset: 3, startX: 30, startY: 30, startAngle: 0 };
     const path = {
