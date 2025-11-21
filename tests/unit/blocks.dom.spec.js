@@ -1,5 +1,44 @@
 const BlockManager = require('../../js/blocks.js');
 
+// Mock Blockly for testing
+const mockBlocklyBlock = {
+  id: '1',
+  type: 'mission_move',
+  previousConnection: null,
+  nextConnection: null,
+  initSvg: jest.fn(),
+  render: jest.fn(),
+  setFieldValue: jest.fn(),
+  getFieldValue: jest.fn((field) => {
+    if (field === 'DIRECTION') return 0;
+    if (field === 'DEGREES') return 360;
+    if (field === 'TEXT') return '';
+    if (field === 'SHOW_POSITION') return 'FALSE';
+    return '';
+  }),
+  getNextBlock: jest.fn(() => null)
+};
+
+const mockWorkspace = {
+  clear: jest.fn(),
+  newBlock: jest.fn((type) => ({
+    ...mockBlocklyBlock,
+    type,
+    id: Date.now().toString()
+  })),
+  addChangeListener: jest.fn(),
+  getTopBlocks: jest.fn(() => [])
+};
+
+global.Blockly = {
+  inject: jest.fn(() => mockWorkspace),
+  Events: {
+    BLOCK_CHANGE: 'block_change',
+    BLOCK_MOVE: 'block_move',
+    BLOCK_DELETE: 'block_delete'
+  }
+};
+
 describe('BlockManager DOM behaviors', () => {
   let bm;
   let container;
@@ -11,81 +50,74 @@ describe('BlockManager DOM behaviors', () => {
     window.missionPlanner = {
       update: jest.fn(),
       pathCalculator: { calculateMoveBlock: jest.fn().mockReturnValue([]) },
-      robot: { getConfig: () => ({ startX: 30, startY: 30, startAngle: 0, wheelBase: 12 }) }
+      robot: { getConfig: () => ({ startX: 30, startY: 30, startAngle: 0, wheelBase: 12, width: 15, wheelOffset: 3 }) }
     };
+    
+    // Reset mocks
+    mockWorkspace.clear.mockClear();
+    mockWorkspace.newBlock.mockClear();
+    mockWorkspace.getTopBlocks.mockClear();
+    
     bm = new BlockManager();
   });
 
   it('renders empty state and adds/removes blocks', () => {
     bm.renderBlocks();
-    expect(container.textContent).toMatch(/No blocks added yet/i);
+    // With Blockly, empty state doesn't show text message, just empty workspace
+    expect(bm.blocks.length).toBe(0);
 
     const t = bm.addTextBlock();
     const m = bm.addMoveBlock();
-    expect(container.querySelectorAll('.program-block').length).toBe(2);
+    expect(bm.blocks.length).toBe(2);
+    expect(mockWorkspace.newBlock).toHaveBeenCalled();
 
     bm.removeBlock(t.id);
-    expect(container.querySelectorAll('.program-block').length).toBe(1);
+    expect(bm.blocks.length).toBe(1);
   });
 
-  it('updates validation classes and helper text for invalid move block', () => {
+  it('updates validation state for invalid move block', () => {
     const move = bm.addMoveBlock();
-    const blockEl = container.querySelector(`.program-block[data-block-id="${move.id}"]`);
-    expect(blockEl).toBeTruthy();
+    expect(move).toBeTruthy();
+    expect(move.type).toBe('move');
 
     bm.updateBlock(move.id, 'direction', 150); // invalid
-    const invalidEl = container.querySelector(`.program-block[data-block-id="${move.id}"]`);
-    expect(invalidEl.classList.contains('invalid')).toBe(true);
-    expect(invalidEl.querySelector('.block-error-helper')).toBeTruthy();
+    const block = bm.blocks.find(b => b.id === move.id);
+    expect(block.valid).toBe(false);
 
     bm.updateBlock(move.id, 'direction', 0); // valid
-    const validEl = container.querySelector(`.program-block[data-block-id="${move.id}"]`);
-    expect(validEl.classList.contains('invalid')).toBe(false);
-    expect(validEl.querySelector('.block-error-helper')).toBeFalsy();
+    const validBlock = bm.blocks.find(b => b.id === move.id);
+    expect(validBlock.valid).toBe(true);
   });
 
-  it('dragging outside container removes a block', () => {
+  it('can remove blocks', () => {
+    // With Blockly, drag-drop is handled by Blockly itself
+    // We test the removeBlock method directly
     bm.addTextBlock();
     bm.addTextBlock();
-    const firstEl = container.querySelector('.program-block');
-    // Assign predictable bounding boxes
-    container.getBoundingClientRect = () => ({ left: 0, right: 200, top: 0, bottom: 400, width: 200, height: 400 });
-    firstEl.getBoundingClientRect = () => ({ left: 0, right: 200, top: 0, bottom: 50, width: 200, height: 50 });
-
-    const eStart = {
-      currentTarget: firstEl,
-      dataTransfer: { effectAllowed: '', setData: () => {} },
-      clientX: 10,
-      clientY: 10,
-      preventDefault: () => {}
-    };
-    bm.handleDragStart(eStart, parseInt(firstEl.dataset.blockId));
-
-    // Simulate drag over to create placeholder
-    const eOver = { preventDefault: () => {}, dataTransfer: { dropEffect: '' }, clientY: 300 };
-    bm.handleDragOver(eOver);
-
-    // End drag outside to trigger removal
-    const eEnd = { currentTarget: firstEl, clientX: -10, clientY: 10 };
-    const countBefore = container.querySelectorAll('.program-block').length;
-    bm.handleDragEnd(eEnd);
-    const countAfter = container.querySelectorAll('.program-block').length;
-    expect(countAfter).toBeLessThan(countBefore);
+    expect(bm.blocks.length).toBe(2);
+    
+    const firstBlockId = bm.blocks[0].id;
+    bm.removeBlock(firstBlockId);
+    
+    expect(bm.blocks.length).toBe(1);
+    expect(bm.blocks.find(b => b.id === firstBlockId)).toBeUndefined();
   });
 
   it('reorders blocks via moveBlock', () => {
     const a = bm.addTextBlock();
     const b = bm.addMoveBlock();
-    const before = Array.from(container.querySelectorAll('.program-block')).map(el => parseInt(el.dataset.blockId));
+    const beforeIds = bm.blocks.map(bl => bl.id);
+    
     bm.moveBlock(1, 0); // move second to first
-    const after = Array.from(container.querySelectorAll('.program-block')).map(el => parseInt(el.dataset.blockId));
-    expect(after[0]).toBe(b.id);
-    expect(after.join(',')).not.toBe(before.join(','));
+    const afterIds = bm.blocks.map(bl => bl.id);
+    
+    expect(afterIds[0]).toBe(b.id);
+    expect(afterIds.join(',')).not.toBe(beforeIds.join(','));
   });
 
   it('loadProgram handles invalid input and marks invalid moves', () => {
     bm.loadProgram(null); // invalid input branch
-    expect(container.children.length).toBeGreaterThan(0); // empty-state message
+    expect(bm.blocks.length).toBe(0); // Should remain empty
 
     bm.loadProgram([
       { type: 'text', content: 'hi', showPosition: true },

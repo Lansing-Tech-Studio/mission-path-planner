@@ -9,54 +9,74 @@ test.describe('Program Block Management', () => {
   test('should add a text block', async ({ page }) => {
     await page.locator('#addTextBlock').click();
     
-    const blocks = page.locator('.program-block.text-block');
-    await expect(blocks).toHaveCount(1);
+    // Check that a block was created by evaluating internal state
+    const blockCount = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks.length;
+    });
+    expect(blockCount).toBe(1);
     
-    const textarea = blocks.first().locator('textarea');
-    await expect(textarea).toBeVisible();
+    const blockType = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks[0].type;
+    });
+    expect(blockType).toBe('text');
+    
+    // Verify Blockly rendered the block
+    const blocklyBlocks = page.locator('.blocklyDraggable');
+    await expect(blocklyBlocks.first()).toBeVisible();
   });
 
   test('should add a move block', async ({ page }) => {
     await page.locator('#addMoveBlock').click();
     
-    const blocks = page.locator('.program-block.move-block');
-    await expect(blocks).toHaveCount(1);
+    // Check internal state for move block
+    const blockCount = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks.length;
+    });
+    expect(blockCount).toBe(1);
     
-    const directionInput = blocks.first().locator('input[type="number"]').first();
-    const degreesInput = blocks.first().locator('input[type="number"]').nth(1);
+    const blockType = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks[0].type;
+    });
+    expect(blockType).toBe('move');
     
-    await expect(directionInput).toBeVisible();
-    await expect(degreesInput).toBeVisible();
+    // Verify Blockly SVG blocks are rendered
+    const blocklyBlocks = page.locator('.blocklyDraggable');
+    await expect(blocklyBlocks.first()).toBeVisible();
   });
 
   test('should validate move block direction', async ({ page }) => {
     await page.locator('#addMoveBlock').click();
     
-    const block = page.locator('.program-block.move-block').first();
-    const directionInput = block.locator('input[type="number"]').first();
+    // Update block with invalid direction via JavaScript
+    await page.evaluate(() => {
+      const bm = (window as any).missionPlanner.blocks;
+      const blockId = bm.blocks[0].id;
+      bm.updateBlock(blockId, 'direction', 150); // invalid
+    });
     
-    // Invalid direction
-    await directionInput.fill('150');
-    await directionInput.blur();
-    
-    // Wait a bit for validation to trigger
-    await page.waitForTimeout(100);
-    
-    await expect(block).toHaveClass(/invalid/);
+    // Check that block is marked as invalid in internal state
+    const isValid = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks[0].valid;
+    });
+    expect(isValid).toBe(false);
   });
 
   test('should accept valid move block values', async ({ page }) => {
     await page.locator('#addMoveBlock').click();
     
-    const block = page.locator('.program-block.move-block').first();
-    const directionInput = block.locator('input[type="number"]').first();
-    const degreesInput = block.locator('input[type="number"]').nth(1);
+    // Update with valid values
+    await page.evaluate(() => {
+      const bm = (window as any).missionPlanner.blocks;
+      const blockId = bm.blocks[0].id;
+      bm.updateBlock(blockId, 'direction', 50);
+      bm.updateBlock(blockId, 'degrees', 720);
+    });
     
-    await directionInput.fill('50');
-    await degreesInput.fill('720');
-    await degreesInput.blur();
-    
-    await expect(block).not.toHaveClass(/invalid/);
+    // Check validity
+    const isValid = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks[0].valid;
+    });
+    expect(isValid).toBe(true);
   });
 
   test('should add multiple blocks', async ({ page }) => {
@@ -65,12 +85,20 @@ test.describe('Program Block Management', () => {
     await page.locator('#addMoveBlock').click();
     await page.locator('#addTextBlock').click();
     
-    const allBlocks = page.locator('.program-block');
-    await expect(allBlocks).toHaveCount(4);
+    // Check internal state
+    const blockCount = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks.length;
+    });
+    expect(blockCount).toBe(4);
     
-    const textBlocks = page.locator('.text-block');
-    const moveBlocks = page.locator('.move-block');
-    await expect(textBlocks).toHaveCount(2);
-    await expect(moveBlocks).toHaveCount(2);
+    const types = await page.evaluate(() => {
+      return (window as any).missionPlanner.blocks.blocks.map((b: any) => b.type);
+    });
+    
+    const textCount = types.filter((t: string) => t === 'text').length;
+    const moveCount = types.filter((t: string) => t === 'move').length;
+    
+    expect(textCount).toBe(2);
+    expect(moveCount).toBe(2);
   });
 });

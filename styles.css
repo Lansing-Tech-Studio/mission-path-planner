@@ -278,15 +278,21 @@ body {
     background-color: #da190b;
 }
 
-/* Program Blocks */
+/* Program Blocks - Blockly Workspace */
 .program-blocks {
     flex: 1;
     overflow-y: auto;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
-    padding: 10px;
     background-color: #fafafa;
     margin-bottom: 10px;
+    min-height: 300px;
+    position: relative;
+}
+
+/* Blockly workspace injected content */
+.program-blocks .injectionDiv {
+    height: 100% !important;
 }
 
 .program-block {
