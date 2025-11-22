@@ -138,6 +138,9 @@ class BlockManager {
         if (block) {
             block[field] = value;
             
+            // Update the corresponding DOM input field
+            this.updateBlockDOMField(id, field, value);
+            
             // Validate move blocks and update styling without re-rendering
             if (block.type === 'move') {
                 block.valid = this.validateMoveBlock(block);
@@ -149,6 +152,41 @@ class BlockManager {
                 window.missionPlanner.update();
             }
         }
+    }
+    
+    updateBlockDOMField(id, field, value) {
+        // Find the block element and update the corresponding input field
+        const blockElements = this.container.querySelectorAll('.program-block');
+        blockElements.forEach(el => {
+            const blockId = parseInt(el.dataset.blockId);
+            if (blockId === id) {
+                // Find the input for this field
+                const content = el.querySelector('.block-content');
+                if (content) {
+                    if (field === 'degrees') {
+                        const degreesInput = content.querySelector('input[type="number"][title*="forward"]');
+                        if (degreesInput) {
+                            degreesInput.value = value;
+                        }
+                    } else if (field === 'direction') {
+                        const directionInput = content.querySelector('input[type="number"][title*="straight"]');
+                        if (directionInput) {
+                            directionInput.value = value;
+                        }
+                    } else if (field === 'content') {
+                        const textarea = content.querySelector('textarea');
+                        if (textarea) {
+                            textarea.value = value;
+                        }
+                    } else if (field === 'showPosition') {
+                        const checkbox = content.querySelector('input[type="checkbox"]');
+                        if (checkbox) {
+                            checkbox.checked = value;
+                        }
+                    }
+                }
+            }
+        });
     }
     
     updateBlockValidation(id, isValid) {
