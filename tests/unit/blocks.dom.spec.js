@@ -96,4 +96,45 @@ describe('BlockManager DOM behaviors', () => {
     expect(prog.length).toBe(2);
     expect(prog[1].valid).toBe(false);
   });
+
+  it('updates DOM input fields when updateBlock is called', () => {
+    const move = bm.addMoveBlock();
+    const blockEl = container.querySelector(`.program-block[data-block-id="${move.id}"]`);
+    const degreesInput = blockEl.querySelector('input[type="number"][title*="forward"]');
+    const directionInput = blockEl.querySelector('input[type="number"][title*="straight"]');
+    
+    // Verify initial values
+    expect(degreesInput.value).toBe('360');
+    expect(directionInput.value).toBe('0');
+    
+    // Update degrees via updateBlock (simulating endpoint drag)
+    bm.updateBlock(move.id, 'degrees', 720);
+    expect(degreesInput.value).toBe('720');
+    
+    // Update direction via updateBlock
+    bm.updateBlock(move.id, 'direction', 50);
+    expect(directionInput.value).toBe('50');
+    
+    // Verify internal block data is also updated
+    const block = bm.blocks.find(b => b.id === move.id);
+    expect(block.degrees).toBe(720);
+    expect(block.direction).toBe(50);
+  });
+
+  it('updates DOM textarea when text block content is updated', () => {
+    const text = bm.addTextBlock();
+    const blockEl = container.querySelector(`.program-block[data-block-id="${text.id}"]`);
+    const textarea = blockEl.querySelector('textarea');
+    
+    // Verify initial value
+    expect(textarea.value).toBe('');
+    
+    // Update content via updateBlock
+    bm.updateBlock(text.id, 'content', 'Updated text');
+    expect(textarea.value).toBe('Updated text');
+    
+    // Verify internal block data is also updated
+    const block = bm.blocks.find(b => b.id === text.id);
+    expect(block.content).toBe('Updated text');
+  });
 });
