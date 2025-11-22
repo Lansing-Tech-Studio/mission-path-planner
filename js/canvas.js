@@ -37,6 +37,11 @@ class CanvasRenderer {
         this.dragOffsetY = 0;
         this.rotationHandleRadius = 8; // pixels
         
+        // End dot dragging state
+        this.isDraggingEndDot = false;
+        this.draggedBlockIndex = -1;
+        this.currentPath = null;
+        
         this.initCanvas();
         this.setupDragging();
         this.setupResize();
@@ -186,6 +191,86 @@ class CanvasRenderer {
         return distance <= handleRadiusCm;
     }
     
+    // Check if point is within an end dot's hit radius
+    isPointInEndDot(matX, matY, dotX, dotY) {
+        const dx = matX - dotX;
+        const dy = matY - dotY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Hit radius in cm - smaller than robot handle for precision
+        const hitRadiusCm = 0.5; // 5mm hit radius
+        return distance <= hitRadiusCm;
+    }
+    
+    // Find end dot at the given position (only for straight moves with direction=0)
+    findEndDotAtPoint(matX, matY) {
+        if (!this.currentPath || !this.currentPath.points || !window.missionPlanner || !window.missionPlanner.blocks) {
+            return null;
+        }
+        
+        const blocks = window.missionPlanner.blocks.blocks;
+        let moveBlockIndex = 0;
+        
+        // Iterate through path points and find segment ends
+        for (let i = 0; i < this.currentPath.points.length; i++) {
+            const point = this.currentPath.points[i];
+            
+            if (point.segmentEnd) {
+                // Find the corresponding block (count only move blocks)
+                let blockIndex = -1;
+                let moveCount = 0;
+                
+                for (let j = 0; j < blocks.length; j++) {
+                    if (blocks[j].type === 'move') {
+                        if (moveCount === moveBlockIndex) {
+                            blockIndex = j;
+                            break;
+                        }
+                        moveCount++;
+                    }
+                }
+                
+                // Only allow dragging for straight moves (direction === 0)
+                if (blockIndex !== -1 && blocks[blockIndex].direction == 0) {
+                    if (this.isPointInEndDot(matX, matY, point.x, point.y)) {
+                        return {
+                            blockIndex: blockIndex,
+                            point: point
+                        };
+                    }
+                }
+                
+                moveBlockIndex++;
+            }
+        }
+        
+        return null;
+    }
+    
+    // Calculate distance from drag position projected onto movement line
+    calculateDistanceFromDrag(startX, startY, startAngle, dragX, dragY) {
+        // Calculate movement direction vector
+        // Add 90° so that 0° points up instead of right
+        const angleRad = ((startAngle + 90) * Math.PI) / 180;
+        const dirX = Math.cos(angleRad);
+        const dirY = Math.sin(angleRad);
+        
+        // Vector from start to drag position
+        const dx = dragX - startX;
+        const dy = dragY - startY;
+        
+        // Project onto movement direction (dot product)
+        const distance = dx * dirX + dy * dirY;
+        
+        return distance;
+    }
+    
+    // Convert distance in cm to wheel rotation degrees
+    calculateDegreesFromDistance(distanceCm, wheelCircumference) {
+        const rotations = distanceCm / wheelCircumference;
+        return rotations * 360;
+    }
+    
     onMouseDown(e) {
         const rect = this.canvas.getBoundingClientRect();
         // Canvas buffer size matches CSS size, so no scaling needed
@@ -197,7 +282,16 @@ class CanvasRenderer {
         
         if (!this.robotConfig) return;
         
-        // Check if clicking on rotation handle first (higher priority)
+        // Check if clicking on end dot first (highest priority for straight moves)
+        const endDot = this.findEndDotAtPoint(matX, matY);
+        if (endDot) {
+            this.isDraggingEndDot = true;
+            this.draggedBlockIndex = endDot.blockIndex;
+            this.canvas.style.cursor = 'grabbing';
+            return;
+        }
+        
+        // Check if clicking on rotation handle (higher priority than robot body)
         const onRotationHandle = this.isPointInRotationHandle(matX, matY, this.robotConfig);
         const onRobotBody = this.isPointInRobot(matX, matY, this.robotConfig);
         
@@ -224,7 +318,36 @@ class CanvasRenderer {
         const matX = this.canvasToCoordX(canvasX);
         const matY = this.canvasToCoordY(canvasY);
         
-        if (this.isRotating && this.robotConfig) {
+        if (this.isDraggingEndDot && window.missionPlanner) {
+            // Get the block being dragged
+            const blocks = window.missionPlanner.blocks.blocks;
+            const block = blocks[this.draggedBlockIndex];
+            
+            if (block && block.type === 'move') {
+                // Get the starting position of this block
+                const startPosition = window.missionPlanner.blocks.calculatePositionAtBlock(this.draggedBlockIndex);
+                
+                if (startPosition) {
+                    // Calculate new distance based on drag position
+                    const distanceCm = this.calculateDistanceFromDrag(
+                        startPosition.x,
+                        startPosition.y,
+                        startPosition.angle,
+                        matX,
+                        matY
+                    );
+                    
+                    // Convert to degrees and round to integer
+                    const robotConfig = window.missionPlanner.robot.getConfig();
+                    const newDegrees = Math.round(
+                        this.calculateDegreesFromDistance(distanceCm, robotConfig.wheelCircumference)
+                    );
+                    
+                    // Update the block (this will trigger full path recalculation)
+                    window.missionPlanner.blocks.updateBlock(block.id, 'degrees', newDegrees);
+                }
+            }
+        } else if (this.isRotating && this.robotConfig) {
             // Calculate angle from robot axle center to mouse
             const axleCenterX = this.robotConfig.startX + this.robotConfig.width / 2;
             const axleCenterY = this.robotConfig.startY + this.robotConfig.wheelOffset;
@@ -263,7 +386,10 @@ class CanvasRenderer {
             }
         } else if (this.robotConfig) {
             // Update cursor based on hover state
-            if (this.isPointInRotationHandle(matX, matY, this.robotConfig)) {
+            const endDot = this.findEndDotAtPoint(matX, matY);
+            if (endDot) {
+                this.canvas.style.cursor = 'grab';
+            } else if (this.isPointInRotationHandle(matX, matY, this.robotConfig)) {
                 this.canvas.style.cursor = 'grab';
             } else if (this.isPointInRobot(matX, matY, this.robotConfig)) {
                 this.canvas.style.cursor = 'grab';
@@ -276,6 +402,8 @@ class CanvasRenderer {
     onMouseUp() {
         this.isDragging = false;
         this.isRotating = false;
+        this.isDraggingEndDot = false;
+        this.draggedBlockIndex = -1;
         this.canvas.style.cursor = 'default';
     }
     
@@ -324,8 +452,9 @@ class CanvasRenderer {
     }
     
     render(matUrl, robotConfig, path) {
-        // Store robot config for drag detection
+        // Store robot config and path for drag detection
         this.robotConfig = robotConfig;
+        this.currentPath = path;
         
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
