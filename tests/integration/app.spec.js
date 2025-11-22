@@ -73,15 +73,15 @@ describe('MissionPlanner Integration', () => {
           </div>
         </div>
       </div>
-      <div class="bottom-actions-bar">
-        <input type="date" id="planDate" />
-        <label><input type="checkbox" id="printRobotConfig"/> Include Robot Configuration in Print</label>
-        <button id="exportBtn">Export JSON</button>
-        <button id="importBtn">Import JSON</button>
-        <button id="printBtn">Print Plan</button>
-        <input type="file" id="importFile" style="display:none" />
-      </div>
       <div class="right-panel" style="width:800px;height:600px">
+        <div class="plan-controls-bar">
+          <input type="date" id="planDate" />
+          <label><input type="checkbox" id="printRobotConfig"/> Include Robot Configuration in Print</label>
+          <button id="exportBtn">Export</button>
+          <button id="importBtn">Import</button>
+          <button id="printBtn">Print</button>
+        </div>
+        <input type="file" id="importFile" style="display:none" />
         <canvas id="missionCanvas"></canvas>
       </div>
       <div id="printTemplate" style="display:none">

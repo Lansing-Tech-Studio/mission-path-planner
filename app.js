@@ -115,7 +115,7 @@ class MissionPlanner {
             matAlignment.addEventListener('change', () => this.update());
         }
         
-        // Block management
+        // Block management (Program tab)
         document.getElementById('addTextBlock').addEventListener('click', () => {
             this.blocks.addTextBlock();
             this.update();
