@@ -26,8 +26,161 @@ class MissionPlanner {
         // Set default plan date to today
         document.getElementById('planDate').valueAsDate = new Date();
         
+        // Setup panel resize functionality
+        this.setupPanelResize();
+        
         // Initial render
         this.update();
+    }
+    
+    setupPanelResize() {
+        const leftPanel = document.querySelector('.left-panel');
+        const resizeHandle = document.querySelector('.resize-handle');
+        const panelToggle = document.querySelector('.panel-toggle');
+        
+        if (!resizeHandle || !leftPanel || !panelToggle) return;
+        
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        // Restore saved panel state
+        const savedState = localStorage.getItem('missionPlanner_panelState');
+        if (savedState) {
+            try {
+                const state = JSON.parse(savedState);
+                if (state.collapsed) {
+                    leftPanel.classList.add('collapsed');
+                } else if (state.width) {
+                    leftPanel.style.flexBasis = state.width + 'px';
+                }
+            } catch (e) {
+                console.error('Failed to restore panel state:', e);
+            }
+        }
+        
+        // Save panel state
+        const savePanelState = () => {
+            const isCollapsed = leftPanel.classList.contains('collapsed');
+            const width = parseInt(leftPanel.style.flexBasis) || 320;
+            localStorage.setItem('missionPlanner_panelState', JSON.stringify({
+                collapsed: isCollapsed,
+                width: width
+            }));
+        };
+        
+        // Toggle panel collapse
+        const togglePanel = () => {
+            leftPanel.classList.toggle('collapsed');
+            savePanelState();
+            
+            // Update canvas size after transition
+            setTimeout(() => {
+                if (this.canvas) {
+                    this.canvas.updateCanvasSize();
+                }
+            }, 250);
+        };
+        
+        // Panel toggle button click
+        panelToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePanel();
+        });
+        
+        // Keyboard shortcut: Ctrl+B to toggle panel
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                togglePanel();
+            }
+        });
+        
+        // Mouse resize handlers
+        const onMouseDown = (e) => {
+            // Ignore if clicking on toggle button
+            if (e.target === panelToggle) return;
+            
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = leftPanel.getBoundingClientRect().width;
+            
+            leftPanel.classList.add('resizing');
+            resizeHandle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        };
+        
+        const onMouseMove = (e) => {
+            if (!isResizing) return;
+            
+            const delta = e.clientX - startX;
+            let newWidth = startWidth + delta;
+            
+            // Clamp width between min and max
+            newWidth = Math.max(200, Math.min(600, newWidth));
+            
+            leftPanel.style.flexBasis = newWidth + 'px';
+            
+            // Update canvas size during resize
+            if (this.canvas) {
+                this.canvas.updateCanvasSize();
+            }
+        };
+        
+        const onMouseUp = () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            leftPanel.classList.remove('resizing');
+            resizeHandle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            savePanelState();
+        };
+        
+        resizeHandle.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        
+        // Touch support
+        resizeHandle.addEventListener('touchstart', (e) => {
+            if (e.target === panelToggle) return;
+            
+            const touch = e.touches[0];
+            isResizing = true;
+            startX = touch.clientX;
+            startWidth = leftPanel.getBoundingClientRect().width;
+            
+            leftPanel.classList.add('resizing');
+            resizeHandle.classList.add('dragging');
+        }, { passive: true });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!isResizing) return;
+            
+            const touch = e.touches[0];
+            const delta = touch.clientX - startX;
+            let newWidth = startWidth + delta;
+            
+            newWidth = Math.max(200, Math.min(600, newWidth));
+            leftPanel.style.flexBasis = newWidth + 'px';
+            
+            if (this.canvas) {
+                this.canvas.updateCanvasSize();
+            }
+        }, { passive: true });
+        
+        document.addEventListener('touchend', () => {
+            if (!isResizing) return;
+            
+            isResizing = false;
+            leftPanel.classList.remove('resizing');
+            resizeHandle.classList.remove('dragging');
+            
+            savePanelState();
+        });
     }
     
     setupEventListeners() {

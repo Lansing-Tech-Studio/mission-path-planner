@@ -19,14 +19,39 @@
             <div class="sidebar-main">
                 <!-- Tab Navigation -->
                 <div class="tab-navigation">
-                    <button class="tab-button active" data-tab="setup">Setup</button>
-                    <button class="tab-button" data-tab="program">Program</button>
+                    <button class="tab-button active" data-tab="program">Program</button>
+                    <button class="tab-button" data-tab="setup">Setup</button>
                 </div>
                 
                 <!-- Tab Content Container -->
                 <div class="tab-content-container">
+                    <!-- Program Tab -->
+                    <div class="tab-content active" data-tab="program">
+                    <section class="section program-section">
+                        <h2 class="section-header">Program<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <div id="programBlocks" class="program-blocks"></div>
+                        <div class="button-group">
+                            <button id="addMoveBlock" class="btn btn-success icon-btn" title="Add Move Block">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 8v8M8 12h8"/>
+                                </svg>
+                                <span class="btn-text">Move</span>
+                            </button>
+                            <button id="addTextBlock" class="btn btn-neutral icon-btn" title="Add Text Block">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                                    <path d="M4 7h16M4 12h16M4 17h10"/>
+                                </svg>
+                                <span class="btn-text">Text</span>
+                            </button>
+                        </div>
+                        </div>
+                    </section>
+                    </div>
+                    
                     <!-- Setup Tab -->
-                    <div class="tab-content active" data-tab="setup">
+                    <div class="tab-content" data-tab="setup">
                     <!-- Team Info Section -->
                     <section class="section">
                         <h2 class="section-header">Team Info<span class="collapse-icon">−</span></h2>
@@ -129,38 +154,18 @@
                         </div>
                     </section>
                     </div>
-                    
-                    <!-- Program Tab -->
-                    <div class="tab-content" data-tab="program">
-                    <section class="section program-section">
-                        <h2 class="section-header">Program<span class="collapse-icon">−</span></h2>
-                        <div class="section-content">
-                        <div id="programBlocks" class="program-blocks"></div>
-                        <div class="button-group">
-                            <button id="addMoveBlock" class="btn btn-success icon-btn" title="Add Move Block">
-                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M12 8v8M8 12h8"/>
-                                </svg>
-                                <span class="btn-text">Move</span>
-                            </button>
-                            <button id="addTextBlock" class="btn btn-neutral icon-btn" title="Add Text Block">
-                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">
-                                    <path d="M4 7h16M4 12h16M4 17h10"/>
-                                </svg>
-                                <span class="btn-text">Text</span>
-                            </button>
-                        </div>
-                        </div>
-                    </section>
-                    </div>
                 </div>
             </div>
 
 
         </div>
 
-        <!-- Right Panel: Canvas (75%) -->
+        <!-- Resize Handle -->
+        <div class="resize-handle">
+            <button class="panel-toggle" title="Toggle Panel (Ctrl+B)">«</button>
+        </div>
+
+        <!-- Right Panel: Canvas -->
         <div class="right-panel">
             <div class="canvas-description">
                 <label for="description">Description (optional):</label>
