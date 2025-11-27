@@ -141,6 +141,25 @@ npm install
 npx playwright install
 ```
 
+#### 5. Configure VS Code Jest Extension (NixOS only)
+
+If you're on NixOS and use the [Jest extension for VS Code](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest), you need to configure it to run Jest within the Nix environment since Node.js is provided by the flake rather than installed system-wide.
+
+Create `.vscode/settings.json` with:
+
+```json
+{
+  "jest.shell": {
+    "path": "/absolute/path/to/mission-path-planner/.vscode/nix-shell.sh"
+  },
+  "jest.jestCommandLine": "npx jest"
+}
+```
+
+Replace `/absolute/path/to/mission-path-planner` with the actual path to your project directory.
+
+The `.vscode/settings.json` file is git-ignored since it contains machine-specific paths.
+
 ## File Structure
 
 ```text
