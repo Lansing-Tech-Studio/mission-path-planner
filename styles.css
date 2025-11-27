@@ -555,7 +555,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .canvas-description {
@@ -738,6 +739,7 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: block;
     margin: auto;
+    flex-shrink: 0;
 }
 
 /* Print Styles */

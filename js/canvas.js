@@ -75,6 +75,11 @@ class CanvasRenderer {
             scale = availableWidth / this.tableWidth;
         }
         
+        // Enforce a minimum scale so the canvas remains usable when panel is too small
+        // This allows scrolling to view the full canvas
+        const minScale = 1.5; // Minimum ~366px height for FLL table
+        scale = Math.max(scale, minScale);
+        
         // Update scale and canvas dimensions
         this.scale = scale;
         const canvasWidth = this.tableWidth * this.scale;
