@@ -186,8 +186,17 @@ class CanvasRenderer {
         const dy = y - handle.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Click radius in cm - made larger for easier clicking
-        const handleRadiusCm = 3.0; // 3cm click radius
+        // Base click radius in cm
+        const baseHandleRadiusCm = 3.0; // 3cm click radius
+        
+        // Calculate minimum hit radius based on a minimum pixel size (for small displays)
+        const minHitPixels = 12; // Minimum 12 pixel hit radius for usability
+        const avgCoordScale = (this.getCoordScaleX() + this.getCoordScaleY()) / 2;
+        const minHitRadiusCm = avgCoordScale > 0 ? minHitPixels / avgCoordScale : baseHandleRadiusCm;
+        
+        // Use the larger of the base radius or the minimum pixel-based radius
+        const handleRadiusCm = Math.max(baseHandleRadiusCm, minHitRadiusCm);
+        
         return distance <= handleRadiusCm;
     }
     
@@ -197,8 +206,17 @@ class CanvasRenderer {
         const dy = matY - dotY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Hit radius in cm - smaller than robot handle for precision
-        const hitRadiusCm = 0.5; // 5mm hit radius
+        // Base hit radius in cm
+        const baseHitRadiusCm = 0.5; // 5mm hit radius
+        
+        // Calculate minimum hit radius based on a minimum pixel size (for small displays)
+        const minHitPixels = 12; // Minimum 12 pixel hit radius for usability
+        const avgCoordScale = (this.getCoordScaleX() + this.getCoordScaleY()) / 2;
+        const minHitRadiusCm = avgCoordScale > 0 ? minHitPixels / avgCoordScale : baseHitRadiusCm;
+        
+        // Use the larger of the base radius or the minimum pixel-based radius
+        const hitRadiusCm = Math.max(baseHitRadiusCm, minHitRadiusCm);
+        
         return distance <= hitRadiusCm;
     }
     
