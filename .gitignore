@@ -5,3 +5,5 @@ test-results/
 temp/
 *.log
 .DS_Store
+.direnv/
+.vscode/settings.json

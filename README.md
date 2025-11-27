@@ -96,6 +96,70 @@ Coverage thresholds enforced by Jest:
   - Serves the app for manual testing and Playwright runs
   - Base URL typically `http://localhost:5173`
 
+### Linux Setup (Ubuntu 24.04+)
+
+This project includes a Nix flake for automatic environment setup with the correct Node.js version. To use it:
+
+#### 1. Install Nix
+
+```bash
+# Install Nix package manager (multi-user installation recommended)
+curl -fsSL https://install.determinate.systems/nix | sh -s -- install
+```
+
+#### 2. Install direnv
+
+```bash
+# Install direnv
+sudo apt install direnv
+
+# Add the hook to your shell (add to ~/.bashrc for bash)
+echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
+
+# Reload your shell
+source ~/.bashrc
+```
+
+#### 3. Allow direnv in this project
+
+```bash
+# Navigate to the project directory
+cd mission-path-planner
+
+# Allow direnv to load the environment
+direnv allow .
+```
+
+After running `direnv allow`, the environment will automatically load whenever you enter the project directory, providing the correct Node.js version and all system dependencies needed for Playwright browsers.
+
+#### 4. First-time setup
+
+When you first enter the project (or if `node_modules` doesn't exist), you'll see a reminder to run:
+
+```bash
+npm install
+npx playwright install
+```
+
+#### 5. Configure VS Code Jest Extension (NixOS only)
+
+If you're on NixOS and use the [Jest extension for VS Code](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest), you need to configure it to run Jest within the Nix environment since Node.js is provided by the flake rather than installed system-wide.
+
+Create `.vscode/settings.json` with:
+
+```json
+{
+  "jest.shell": {
+    "path": "/absolute/path/to/mission-path-planner/.vscode/nix-shell.sh"
+  },
+  "jest.jestCommandLine": "npx jest"
+}
+```
+
+Replace `/absolute/path/to/mission-path-planner` with the actual path to your project directory.
+
+The `.vscode/settings.json` file is git-ignored since it contains machine-specific paths.
+
 ## File Structure
 
 ```text

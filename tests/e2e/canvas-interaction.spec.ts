@@ -16,6 +16,9 @@ test.describe('Canvas Interactions', () => {
   });
 
   test('should update start position inputs', async ({ page }) => {
+    // Navigate to Setup tab first (Program is now default)
+    await page.locator('button[data-tab="setup"]').click();
+    
     const startX = page.locator('#startX');
     const startY = page.locator('#startY');
     
@@ -28,6 +31,9 @@ test.describe('Canvas Interactions', () => {
   });
 
   test('should update start angle', async ({ page }) => {
+    // Navigate to Setup tab first (Program is now default)
+    await page.locator('button[data-tab="setup"]').click();
+    
     const startAngle = page.locator('#startAngle');
     
     await startAngle.fill('45');
@@ -38,6 +44,9 @@ test.describe('Canvas Interactions', () => {
   });
 
   test('should update mat alignment', async ({ page }) => {
+    // Navigate to Setup tab first (Program is now default)
+    await page.locator('button[data-tab="setup"]').click();
+    
     const matAlignment = page.locator('#matAlignment');
     
     await matAlignment.selectOption('right');

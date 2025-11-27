@@ -8,10 +8,13 @@ test.describe('Import/Export', () => {
   });
 
   test('should export JSON configuration', async ({ page }) => {
+    // Navigate to Setup tab first (Program is now default)
+    await page.locator('button[data-tab="setup"]').click();
+    
     // Set team name
     await page.locator('#teamName').fill('Test Team');
     
-    // Add a program block
+    // Switch back to Program tab to add a block
     await page.locator('button[data-tab="program"]').click();
     await page.locator('#addMoveBlock').click();
     
