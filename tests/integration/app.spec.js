@@ -160,4 +160,237 @@ describe('MissionPlanner Integration', () => {
     expect(document.getElementById('matAlignment').value).toBe('right');
     expect(document.getElementById('planDate').value).toBe('2025-12-25');
   });
+
+  describe('auto-save and restore', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('restoreLastState loads state from localStorage', () => {
+      const savedState = {
+        teamInfo: { name: 'Restored Team' },
+        mat: { selected: 'blank', alignment: 'centered' }
+      };
+      mission.storage.saveLastState(savedState);
+      
+      mission.restoreLastState();
+      
+      expect(document.getElementById('teamName').value).toBe('Restored Team');
+    });
+
+    it('autoSave debounces and saves state', (done) => {
+      jest.useFakeTimers();
+      const saveSpy = jest.spyOn(mission.storage, 'saveLastState').mockReturnValue({ success: true });
+      
+      mission.autoSave();
+      mission.autoSave();
+      mission.autoSave();
+      
+      expect(saveSpy).not.toHaveBeenCalled();
+      
+      jest.advanceTimersByTime(500);
+      
+      expect(saveSpy).toHaveBeenCalledTimes(1);
+      
+      saveSpy.mockRestore();
+      jest.useRealTimers();
+      done();
+    });
+
+    it('showStorageWarning shows alert only once per session', () => {
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      
+      mission._storageWarningShown = false;
+      mission.showStorageWarning(85);
+      mission.showStorageWarning(90);
+      
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('85%'));
+      
+      alertSpy.mockRestore();
+    });
+  });
+
+  describe('save and load robot configurations', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('saveCurrentRobot saves robot config when name provided', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('My Robot');
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      
+      mission.saveCurrentRobot();
+      
+      expect(promptSpy).toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'));
+      
+      const savedRobots = mission.storage.loadSavedRobots();
+      expect(Object.keys(savedRobots).length).toBe(1);
+      expect(Object.values(savedRobots)[0].name).toBe('My Robot');
+      
+      promptSpy.mockRestore();
+      alertSpy.mockRestore();
+    });
+
+    it('saveCurrentRobot does nothing when prompt cancelled', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue(null);
+      
+      mission.saveCurrentRobot();
+      
+      const savedRobots = mission.storage.loadSavedRobots();
+      expect(Object.keys(savedRobots).length).toBe(0);
+      
+      promptSpy.mockRestore();
+    });
+
+    it('loadSavedRobot loads robot configuration', () => {
+      const result = mission.storage.saveRobotConfig('Test Robot', {
+        length: 25, width: 20, wheelOffset: 5, wheelCircumference: 20, wheelBase: 15
+      });
+      
+      mission.loadSavedRobot(result.id);
+      
+      expect(document.getElementById('robotLength').value).toBe('25');
+      expect(document.getElementById('robotWidth').value).toBe('20');
+    });
+
+    it('deleteSavedRobot removes robot after confirmation', () => {
+      const result = mission.storage.saveRobotConfig('Robot To Delete', { length: 10 });
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      
+      mission.deleteSavedRobot(result.id);
+      
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(mission.storage.getRobotConfig(result.id)).toBeNull();
+      
+      confirmSpy.mockRestore();
+    });
+  });
+
+  describe('save and load programs', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('saveCurrentProgram saves program when name provided', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('My Program');
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      
+      mission.saveCurrentProgram();
+      
+      expect(promptSpy).toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'));
+      
+      const savedPrograms = mission.storage.loadSavedPrograms();
+      expect(Object.keys(savedPrograms).length).toBe(1);
+      expect(Object.values(savedPrograms)[0].name).toBe('My Program');
+      
+      promptSpy.mockRestore();
+      alertSpy.mockRestore();
+    });
+
+    it('saveCurrentProgram does nothing when prompt cancelled', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('');
+      
+      mission.saveCurrentProgram();
+      
+      const savedPrograms = mission.storage.loadSavedPrograms();
+      expect(Object.keys(savedPrograms).length).toBe(0);
+      
+      promptSpy.mockRestore();
+    });
+
+    it('loadSavedProgram loads program data', () => {
+      const result = mission.storage.saveProgram('Test Program', {
+        teamInfo: { name: 'Loaded Team' },
+        mat: { selected: 'blank', alignment: 'centered' }
+      });
+      
+      mission.loadSavedProgram(result.id);
+      
+      expect(document.getElementById('teamName').value).toBe('Loaded Team');
+    });
+
+    it('deleteSavedProgram removes program after confirmation', () => {
+      const result = mission.storage.saveProgram('Program To Delete', { teamInfo: {} });
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      
+      mission.deleteSavedProgram(result.id);
+      
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(mission.storage.getProgram(result.id)).toBeNull();
+      
+      confirmSpy.mockRestore();
+    });
+  });
+
+  describe('storage management UI', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      // Add storage UI elements to DOM
+      document.body.innerHTML += `
+        <select id="savedRobots"><option value="">--</option></select>
+        <select id="savedPrograms"><option value="">--</option></select>
+        <div id="storageUsageBar"></div>
+        <span id="storageUsageText"></span>
+        <div id="savedRobotsList"></div>
+        <div id="savedProgramsList"></div>
+      `;
+    });
+
+    it('updateStorageUI populates dropdowns', () => {
+      mission.storage.saveRobotConfig('Robot 1', { length: 10 });
+      mission.storage.saveProgram('Program 1', { teamInfo: {} });
+      
+      mission.updateStorageUI();
+      
+      const robotOptions = document.querySelectorAll('#savedRobots option');
+      const programOptions = document.querySelectorAll('#savedPrograms option');
+      
+      expect(robotOptions.length).toBe(2);
+      expect(programOptions.length).toBe(2);
+    });
+
+    it('updateStorageUI updates usage bar', () => {
+      mission.updateStorageUI();
+      
+      const usageText = document.getElementById('storageUsageText').textContent;
+      expect(usageText).toContain('KB');
+      expect(usageText).toContain('%');
+    });
+
+    it('updateStorageUI shows empty list message', () => {
+      mission.updateStorageUI();
+      
+      const robotsList = document.getElementById('savedRobotsList').innerHTML;
+      const programsList = document.getElementById('savedProgramsList').innerHTML;
+      
+      expect(robotsList).toContain('No saved robots');
+      expect(programsList).toContain('No saved programs');
+    });
+
+    it('clearAllSavedData clears storage after confirmation', () => {
+      mission.storage.saveRobotConfig('Robot', { length: 10 });
+      mission.storage.saveProgram('Program', { teamInfo: {} });
+      
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      
+      mission.clearAllSavedData();
+      
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(Object.keys(mission.storage.loadSavedRobots()).length).toBe(0);
+      expect(Object.keys(mission.storage.loadSavedPrograms()).length).toBe(0);
+      
+      confirmSpy.mockRestore();
+      alertSpy.mockRestore();
+    });
+
+    it('escapeHtml escapes special characters', () => {
+      const escaped = mission.escapeHtml('<script>alert("xss")</script>');
+      expect(escaped).not.toContain('<script>');
+      expect(escaped).toContain('&lt;');
+    });
+  });
 });
