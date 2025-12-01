@@ -8,6 +8,10 @@ class MissionPlanner {
         this.storage = null;
         this.print = null;
         
+        // Debounce timer for auto-save
+        this.autoSaveTimer = null;
+        this.autoSaveDelay = 500; // ms
+        
         this.init();
     }
     
@@ -29,8 +33,45 @@ class MissionPlanner {
         // Setup panel resize functionality
         this.setupPanelResize();
         
+        // Restore last state from localStorage
+        this.restoreLastState();
+        
         // Initial render
         this.update();
+        
+        // Update storage management UI
+        this.updateStorageUI();
+    }
+    
+    restoreLastState() {
+        const lastState = this.storage.loadLastState();
+        if (lastState) {
+            console.log('Restoring last state from localStorage');
+            this.loadData(lastState);
+        }
+    }
+    
+    autoSave() {
+        // Clear any pending auto-save
+        if (this.autoSaveTimer) {
+            clearTimeout(this.autoSaveTimer);
+        }
+        
+        // Debounce the save
+        this.autoSaveTimer = setTimeout(() => {
+            const result = this.storage.saveLastState(this.getData());
+            if (result.isWarning) {
+                this.showStorageWarning(result.percentUsed);
+            }
+        }, this.autoSaveDelay);
+    }
+    
+    showStorageWarning(percentUsed) {
+        // Only show warning once per session
+        if (this._storageWarningShown) return;
+        this._storageWarningShown = true;
+        
+        alert(`Storage is ${percentUsed}% full. Consider removing old saved robots or programs in the Setup tab > Storage Management section.`);
     }
     
     setupPanelResize() {
@@ -298,6 +339,58 @@ class MissionPlanner {
         document.getElementById('printBtn').addEventListener('click', () => {
             this.print.printPlan(this.getData(), this.canvas.canvas);
         });
+        
+        // Save/Load Robot Config
+        const saveRobotBtn = document.getElementById('saveRobotBtn');
+        if (saveRobotBtn) {
+            saveRobotBtn.addEventListener('click', () => this.saveCurrentRobot());
+        }
+        
+        const savedRobots = document.getElementById('savedRobots');
+        if (savedRobots) {
+            savedRobots.addEventListener('change', () => {
+                if (savedRobots.value) {
+                    this.loadSavedRobot(savedRobots.value);
+                    savedRobots.value = ''; // Reset dropdown
+                }
+            });
+        }
+        
+        // Save/Load Program
+        const saveProgramBtn = document.getElementById('saveProgramBtn');
+        if (saveProgramBtn) {
+            saveProgramBtn.addEventListener('click', () => this.saveCurrentProgram());
+        }
+        
+        const savedPrograms = document.getElementById('savedPrograms');
+        if (savedPrograms) {
+            savedPrograms.addEventListener('change', () => {
+                if (savedPrograms.value) {
+                    this.loadSavedProgram(savedPrograms.value);
+                    savedPrograms.value = ''; // Reset dropdown
+                }
+            });
+        }
+        
+        // Storage Management - Clear All
+        const clearStorageBtn = document.getElementById('clearStorageBtn');
+        if (clearStorageBtn) {
+            clearStorageBtn.addEventListener('click', () => this.clearAllSavedData());
+        }
+        
+        // Storage Management - Delete buttons (event delegation)
+        document.addEventListener('click', (e) => {
+            const deleteRobotBtn = e.target.closest('.delete-robot-btn');
+            const deleteProgramBtn = e.target.closest('.delete-program-btn');
+            
+            if (deleteRobotBtn) {
+                e.preventDefault();
+                this.deleteSavedRobot(deleteRobotBtn.dataset.id);
+            } else if (deleteProgramBtn) {
+                e.preventDefault();
+                this.deleteSavedProgram(deleteProgramBtn.dataset.id);
+            }
+        });
     }
     
     update() {
@@ -315,6 +408,9 @@ class MissionPlanner {
         
         // Render on canvas
         this.canvas.render(matUrl, robotConfig, path);
+        
+        // Auto-save current state
+        this.autoSave();
     }
     
     getMatUrl() {
@@ -380,6 +476,198 @@ class MissionPlanner {
         
         if (data.planDate) {
             document.getElementById('planDate').value = data.planDate;
+        }
+    }
+    
+    // ========== Robot Config Save/Load ==========
+    
+    saveCurrentRobot() {
+        const name = prompt('Enter a name for this robot configuration:');
+        if (!name || !name.trim()) {
+            return;
+        }
+        
+        const config = this.robot.getConfig();
+        const result = this.storage.saveRobotConfig(name, config);
+        
+        if (result.success) {
+            alert(`Robot "${name}" saved successfully!`);
+            this.updateStorageUI();
+            if (result.isWarning) {
+                this.showStorageWarning(result.percentUsed);
+            }
+        } else if (result.reason === 'quota_exceeded') {
+            alert(`Cannot save: Storage is ${result.percentUsed}% full. Please remove some saved items first.`);
+        } else {
+            alert('Failed to save robot configuration.');
+        }
+    }
+    
+    loadSavedRobot(id) {
+        const saved = this.storage.getRobotConfig(id);
+        if (saved) {
+            this.robot.loadConfig(saved.config);
+            // Clear preset selection since we're loading a custom config
+            const robotPreset = document.getElementById('robotPreset');
+            if (robotPreset) {
+                robotPreset.value = '';
+            }
+            this.update();
+        }
+    }
+    
+    deleteSavedRobot(id) {
+        const saved = this.storage.getRobotConfig(id);
+        if (saved && confirm(`Delete robot "${saved.name}"?`)) {
+            this.storage.deleteRobotConfig(id);
+            this.updateStorageUI();
+        }
+    }
+    
+    // ========== Program Save/Load ==========
+    
+    saveCurrentProgram() {
+        const name = prompt('Enter a name for this program:');
+        if (!name || !name.trim()) {
+            return;
+        }
+        
+        const data = this.getData();
+        const result = this.storage.saveProgram(name, data);
+        
+        if (result.success) {
+            alert(`Program "${name}" saved successfully!`);
+            this.updateStorageUI();
+            if (result.isWarning) {
+                this.showStorageWarning(result.percentUsed);
+            }
+        } else if (result.reason === 'quota_exceeded') {
+            alert(`Cannot save: Storage is ${result.percentUsed}% full. Please remove some saved items first.`);
+        } else {
+            alert('Failed to save program.');
+        }
+    }
+    
+    loadSavedProgram(id) {
+        const saved = this.storage.getProgram(id);
+        if (saved) {
+            this.loadData(saved);
+            this.update();
+        }
+    }
+    
+    deleteSavedProgram(id) {
+        const saved = this.storage.getProgram(id);
+        if (saved && confirm(`Delete program "${saved.name}"?`)) {
+            this.storage.deleteProgram(id);
+            this.updateStorageUI();
+        }
+    }
+    
+    // ========== Storage Management UI ==========
+    
+    updateStorageUI() {
+        const summary = this.storage.getSavedDataSummary();
+        
+        // Update saved robots dropdown
+        this.updateSavedRobotsDropdown(summary.robots);
+        
+        // Update saved programs dropdown
+        this.updateSavedProgramsDropdown(summary.programs);
+        
+        // Update storage management section
+        this.updateStorageManagement(summary);
+    }
+    
+    updateSavedRobotsDropdown(robots) {
+        const dropdown = document.getElementById('savedRobots');
+        if (!dropdown) return;
+        
+        dropdown.innerHTML = '<option value="">-- Load Saved Robot --</option>';
+        robots.forEach(robot => {
+            const option = document.createElement('option');
+            option.value = robot.id;
+            option.textContent = robot.name;
+            dropdown.appendChild(option);
+        });
+    }
+    
+    updateSavedProgramsDropdown(programs) {
+        const dropdown = document.getElementById('savedPrograms');
+        if (!dropdown) return;
+        
+        dropdown.innerHTML = '<option value="">-- Load Saved Program --</option>';
+        programs.forEach(program => {
+            const option = document.createElement('option');
+            option.value = program.id;
+            option.textContent = program.name;
+            dropdown.appendChild(option);
+        });
+    }
+    
+    updateStorageManagement(summary) {
+        // Update usage bar
+        const usageBar = document.getElementById('storageUsageBar');
+        const usageText = document.getElementById('storageUsageText');
+        
+        if (usageBar && usageText) {
+            const percent = summary.health.percentUsed;
+            usageBar.style.width = `${Math.min(100, percent)}%`;
+            usageBar.className = 'storage-usage-bar' + (summary.health.isWarning ? ' storage-warning' : '');
+            
+            const usedKB = (summary.health.used / 1024).toFixed(1);
+            const quotaKB = (summary.health.quota / 1024).toFixed(0);
+            usageText.textContent = `${usedKB} KB / ${quotaKB} KB (${percent}%)`;
+        }
+        
+        // Update saved robots list
+        const robotsList = document.getElementById('savedRobotsList');
+        if (robotsList) {
+            if (summary.robots.length === 0) {
+                robotsList.innerHTML = '<p class="empty-list">No saved robots</p>';
+            } else {
+                robotsList.innerHTML = summary.robots.map(robot => `
+                    <div class="saved-item" data-id="${robot.id}">
+                        <span class="saved-item-name">${this.escapeHtml(robot.name)}</span>
+                        <span class="saved-item-date">${new Date(robot.createdAt).toLocaleDateString()}</span>
+                        <button class="btn-icon delete-robot-btn" data-id="${robot.id}" title="Delete">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // Update saved programs list
+        const programsList = document.getElementById('savedProgramsList');
+        if (programsList) {
+            if (summary.programs.length === 0) {
+                programsList.innerHTML = '<p class="empty-list">No saved programs</p>';
+            } else {
+                programsList.innerHTML = summary.programs.map(program => `
+                    <div class="saved-item" data-id="${program.id}">
+                        <span class="saved-item-name">${this.escapeHtml(program.name)}</span>
+                        <span class="saved-item-date">${new Date(program.createdAt).toLocaleDateString()}</span>
+                        <button class="btn-icon delete-program-btn" data-id="${program.id}" title="Delete">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    clearAllSavedData() {
+        if (confirm('Are you sure you want to delete ALL saved robots and programs? This cannot be undone.')) {
+            this.storage.clearAllSavedData();
+            this.updateStorageUI();
+            alert('All saved data has been cleared.');
         }
     }
 }
