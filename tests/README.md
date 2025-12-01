@@ -5,6 +5,7 @@ Robust testing infrastructure for the FLL Mission Path Planner application.
 ## Test Suite Overview
 
 This project includes comprehensive testing with:
+
 - **Unit Tests** (Jest + jsdom): Test pure logic in PathCalculator, BlockManager, RobotConfig, StorageManager
 - **E2E Tests** (Playwright): Test full UI interactions, program blocks, import/export, print functionality
 - **CI/CD**: GitHub Actions workflow for automated testing on PRs
@@ -55,7 +56,7 @@ Server runs at `http://localhost:5173`
 
 ## Test Structure
 
-```
+```text
 tests/
 ├── unit/               # Jest unit tests
 │   ├── pathCalculator.spec.js
@@ -84,6 +85,7 @@ tests/
 ## CI/CD
 
 Tests run automatically on:
+
 - Push to `main` or `develop` branches
 - Pull requests to `main` or `develop`
 
@@ -98,6 +100,7 @@ The unit tests require a helper to load non-module JavaScript files into jsdom. 
 **Temporary workaround**: The classes in `js/*.js` files are declared at top-level but need to be explicitly attached to `window` to be accessible in tests. You can either:
 
 1. Modify the helper to use `Function` constructor:
+
    ```javascript
    function evalSourceInWindow(window, filePath) {
      const absolutePath = path.join(__dirname, '../../', filePath);
@@ -179,6 +182,7 @@ npx playwright test tests/e2e/basic-ui.spec.ts
 ## Contributing
 
 When adding new features:
+
 1. Write unit tests for pure logic
 2. Write E2E tests for user-facing features
 3. Ensure coverage thresholds are met

@@ -2,7 +2,7 @@
 
 A web-based application for planning robot paths for FIRST LEGO League Challenge missions.
 
-[Live Demo](https://yourusername.github.io/mission-path-planner/)
+[Live Demo](https://lansingtechstudio.org/mission-path-planner/)
 
 ## Quick Start
 
