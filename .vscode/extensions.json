@@ -1,0 +1,30 @@
+{
+  "recommendations": [
+    // Testing
+    "Orta.vscode-jest",              // Jest test runner integration
+    "ms-playwright.playwright",       // Playwright test runner & recorder
+
+    // Code Quality
+    "dbaeumer.vscode-eslint",         // ESLint integration
+
+    // Web Development
+    "esbenp.prettier-vscode",         // Code formatter (HTML, CSS, JS, JSON)
+    "formulahendry.auto-rename-tag",  // Auto rename paired HTML tags
+    "ecmel.vscode-html-css",          // CSS class IntelliSense for HTML
+
+    // JavaScript
+    "christian-kohler.path-intellisense", // Autocomplete file paths
+
+    // Git
+    "eamodio.gitlens",                // Enhanced Git capabilities
+    "mhutchie.git-graph",             // Git commit graph visualization
+
+    // Productivity
+    "streetsidesoftware.code-spell-checker", // Spell checking for code and comments
+    "EditorConfig.EditorConfig",      // EditorConfig support for consistent coding styles
+
+    // Markdown
+    "DavidAnson.vscode-markdownlint"  // Markdown linting and style checking
+  ],
+  "unwantedRecommendations": []
+}

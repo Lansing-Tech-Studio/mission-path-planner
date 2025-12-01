@@ -96,9 +96,39 @@ Coverage thresholds enforced by Jest:
   - Serves the app for manual testing and Playwright runs
   - Base URL typically `http://localhost:5173`
 
-### Linux Setup (Ubuntu 24.04+)
+### Dev Container (Recommended)
 
-This project includes a Nix flake for automatic environment setup with the correct Node.js version. To use it:
+The easiest way to get started is using a Dev Container. This works with VS Code, GitHub Codespaces, or any devcontainer-compatible IDE.
+
+#### Prerequisites
+
+- [Docker](https://www.docker.com/get-started) installed and running
+- [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+#### Getting Started
+
+1. Open the project folder in VS Code
+2. When prompted, click "Reopen in Container" (or run the command `Dev Containers: Reopen in Container`)
+3. Wait for the container to build and dependencies to install
+4. Start developing! The dev server runs at `http://localhost:5173`
+
+The container includes:
+
+- Node.js 24
+- Playwright browsers pre-installed
+- Jest and Playwright VS Code extensions
+- All system dependencies for running tests
+
+#### Using GitHub Codespaces
+
+1. Click the "Code" button on the GitHub repository
+2. Select "Codespaces" tab
+3. Click "Create codespace on main"
+4. Once loaded, run `npm run dev` to start the dev server
+
+### Linux Setup with Nix (Ubuntu 24.04+)
+
+This project includes a Nix flake for automatic environment setup with the correct Node.js version. This is an alternative to using the Dev Container.
 
 #### 1. Install Nix
 
