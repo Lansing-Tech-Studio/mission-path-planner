@@ -43,7 +43,9 @@ User Input → BlockManager → PathCalculator → CanvasRenderer
 
 ## Development Environment
 
-**Uses Nix flake** for reproducible environment (Node.js 24 + Playwright deps):
+**Dev Container (recommended)**: Open in VS Code with Dev Containers extension, or use GitHub Codespaces. All dependencies are pre-configured.
+
+**Nix flake**: Reproducible environment (Node.js 24 + Playwright deps):
 
 ```bash
 # Enter dev shell (auto-loads with direnv if configured)
@@ -54,7 +56,7 @@ npm install
 npx playwright install chromium
 ```
 
-**Without Nix**: Requires Node.js 18+ and system libraries for Playwright.
+**Without Nix/Container**: Requires Node.js 24+ and system libraries for Playwright.
 
 ## Testing Commands
 

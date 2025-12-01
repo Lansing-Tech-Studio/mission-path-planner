@@ -1,0 +1,45 @@
+{
+  "name": "Mission Path Planner",
+  "image": "mcr.microsoft.com/playwright:v1.56.1-noble",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24"
+    }
+  },
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Testing
+        "Orta.vscode-jest",
+        "ms-playwright.playwright",
+        // Code Quality
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        // Web Development
+        "formulahendry.auto-rename-tag",
+        "ecmel.vscode-html-css",
+        // JavaScript
+        "christian-kohler.path-intellisense",
+        // Git
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        // Productivity
+        "streetsidesoftware.code-spell-checker",
+        "EditorConfig.EditorConfig",
+        // Markdown
+        "DavidAnson.vscode-markdownlint"
+      ],
+      "settings": {
+        "jest.jestCommandLine": "npx jest"
+      }
+    }
+  },
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Dev Server",
+      "onAutoForward": "notify"
+    }
+  }
+}
