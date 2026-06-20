@@ -242,7 +242,8 @@ class StorageManager {
                     wheelOffset: config.wheelOffset,
                     wheelCircumference: config.wheelCircumference,
                     wheelBase: config.wheelBase,
-                    imageUrl: config.imageUrl || ''
+                    imageUrl: config.imageUrl || '',
+                    calibration: config.calibration || undefined
                 }
             };
             

@@ -123,6 +123,61 @@
                         </div>
                     </section>
 
+                    <!-- Calibration Section -->
+                    <section class="section">
+                        <h2 class="section-header">Calibration<span class="collapse-icon">−</span></h2>
+                        <div class="section-content">
+                        <p class="section-intro">Correction factors measured from your physical robot. They adjust only the simulated path, not the robot's dimensions.</p>
+                        <div class="form-group">
+                            <label for="calDistanceFactor">Distance Factor:</label>
+                            <input type="number" id="calDistanceFactor" value="1" min="0.5" max="2" step="0.01">
+                            <small class="field-hint">Scales straight-line distance. Range 0.5–2.0 (1.0 = no correction).</small>
+                            <small class="field-error" id="calDistanceFactorError"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="calTurnFactor">Turn Factor:</label>
+                            <input type="number" id="calTurnFactor" value="1" min="0.5" max="2" step="0.01">
+                            <small class="field-hint">Scales turn/pivot angle. Range 0.5–2.0 (1.0 = no correction).</small>
+                            <small class="field-error" id="calTurnFactorError"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="calDriftOffset">Drift Offset (°/m):</label>
+                            <input type="number" id="calDriftOffset" value="0" min="-45" max="45" step="0.5">
+                            <small class="field-hint">Straight-line drift per metre. Range -45–45 (0 = no drift; positive drifts right).</small>
+                            <small class="field-error" id="calDriftOffsetError"></small>
+                        </div>
+                        <div class="form-group">
+                            <button id="resetCalibrationBtn" class="btn btn-small" title="Reset all calibration factors to defaults">
+                                Reset to Defaults
+                            </button>
+                        </div>
+
+                        <section class="section calibration-help">
+                            <h3 class="section-header">How to Calibrate<span class="collapse-icon">−</span></h3>
+                            <div class="section-content">
+                            <p><strong>Distance Factor</strong></p>
+                            <ol>
+                                <li>Program a single straight move (e.g. 360°) and run it on the real robot.</li>
+                                <li>Measure the actual distance travelled.</li>
+                                <li>Set Distance Factor = actual distance ÷ simulated distance.</li>
+                            </ol>
+                            <p><strong>Turn Factor</strong></p>
+                            <ol>
+                                <li>Program a pivot intended to turn a known angle (e.g. 90°).</li>
+                                <li>Measure the actual angle the robot turned.</li>
+                                <li>Set Turn Factor = actual angle ÷ intended angle.</li>
+                            </ol>
+                            <p><strong>Drift Offset (°/m)</strong></p>
+                            <ol>
+                                <li>Drive straight for at least 100 cm and mark the start and end headings.</li>
+                                <li>Measure the heading change in degrees over the distance driven.</li>
+                                <li>Set Drift Offset = degrees of drift ÷ metres travelled (positive if it veers right).</li>
+                            </ol>
+                            </div>
+                        </section>
+                        </div>
+                    </section>
+
                     <!-- Mat Selection Section -->
                     <section class="section">
                         <h2 class="section-header">Mission Mat<span class="collapse-icon">−</span></h2>
@@ -313,6 +368,7 @@
     <script src="js/pathCalculator.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/print.js"></script>
+    <script src="js/calibration.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

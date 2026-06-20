@@ -292,6 +292,50 @@ body {
     resize: vertical;
 }
 
+/* Calibration helper / error text */
+.field-hint {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-top: 3px;
+}
+
+.field-error {
+    display: block;
+    font-size: 11px;
+    color: #d32f2f;
+    margin-top: 3px;
+}
+
+.field-error:empty {
+    display: none;
+}
+
+.form-group input.invalid {
+    border-color: #d32f2f;
+}
+
+.section-intro {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 12px;
+}
+
+/* Nested "How to Calibrate" help section */
+.calibration-help {
+    margin-top: 8px;
+}
+
+.calibration-help .section-content {
+    font-size: 12px;
+    color: #555;
+}
+
+.calibration-help ol {
+    margin: 4px 0 10px;
+    padding-left: 18px;
+}
+
 /* Buttons */
 .button-group {
     display: flex;

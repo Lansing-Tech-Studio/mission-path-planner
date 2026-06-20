@@ -12,7 +12,14 @@ class RobotConfig {
             startY: 0,   // Bottom-left corner Y
             startAngle: 0
         };
-        
+
+        // Calibration manager owns the calibration defaults and validation. Resolve it
+        // from the browser global or, in tests, via require — the no-module pattern.
+        const CalibrationManagerClass =
+            (typeof CalibrationManager !== 'undefined') ? CalibrationManager :
+            (typeof require !== 'undefined' ? require('./calibration.js') : null);
+        this.calibrationManager = CalibrationManagerClass ? new CalibrationManagerClass() : null;
+
         // Robot presets library
         this.presets = {
             'dadbot': {
@@ -86,7 +93,7 @@ class RobotConfig {
         const wheelCircumferenceVal = document.getElementById('wheelCircumference').value;
         const wheelBaseVal = document.getElementById('wheelBase').value;
         const imageUrlVal = document.getElementById('robotImageUrl').value;
-        
+
         return {
             length: lengthVal === '' ? 20 : parseFloat(lengthVal),
             width: widthVal === '' ? 15 : parseFloat(widthVal),
@@ -96,7 +103,30 @@ class RobotConfig {
             imageUrl: imageUrlVal || '',
             startX: startXValue !== '' ? parseFloat(startXValue) : 30,
             startY: startYValue !== '' ? parseFloat(startYValue) : 30,
-            startAngle: startAngleValue !== '' ? parseFloat(startAngleValue) : 0
+            startAngle: startAngleValue !== '' ? parseFloat(startAngleValue) : 0,
+            calibration: this.getCalibration()
+        };
+    }
+
+    // Read the calibration profile from its three inputs, substituting defaults for any
+    // missing/blank field. The inputs are the source of truth (no hidden field).
+    getCalibration() {
+        const defaults = this.calibrationManager
+            ? this.calibrationManager.getDefault()
+            : { distanceFactor: 1.0, turnFactor: 1.0, driftOffset: 0.0 };
+
+        const readField = (id, fallback) => {
+            const el = document.getElementById(id);
+            const raw = el ? el.value : '';
+            if (raw === '' || raw === null || raw === undefined) return fallback;
+            const parsed = parseFloat(raw);
+            return Number.isNaN(parsed) ? fallback : parsed;
+        };
+
+        return {
+            distanceFactor: readField('calDistanceFactor', defaults.distanceFactor),
+            turnFactor: readField('calTurnFactor', defaults.turnFactor),
+            driftOffset: readField('calDriftOffset', defaults.driftOffset)
         };
     }
     
@@ -129,7 +159,19 @@ class RobotConfig {
         if (config.startAngle !== undefined) {
             document.getElementById('startAngle').value = config.startAngle;
         }
-        
+
+        // Restore calibration, filling defaults for legacy configs that lack the field.
+        const calibration = this.calibrationManager
+            ? this.calibrationManager.normalize(config.calibration)
+            : (config.calibration || { distanceFactor: 1.0, turnFactor: 1.0, driftOffset: 0.0 });
+        const setField = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        };
+        setField('calDistanceFactor', calibration.distanceFactor);
+        setField('calTurnFactor', calibration.turnFactor);
+        setField('calDriftOffset', calibration.driftOffset);
+
         this.config = config;
     }
     

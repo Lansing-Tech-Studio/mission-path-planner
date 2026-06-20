@@ -101,47 +101,96 @@ class PathCalculator {
     
     calculateStraightMove(startX, startY, startAngle, degrees, robotConfig) {
         const points = [];
-        
-        // Calculate distance traveled
+
+        // Calibration factors (default to no correction for legacy/uncalibrated configs)
+        const cal = robotConfig.calibration || {};
+        const distanceFactor = cal.distanceFactor ?? 1.0;
+        const driftOffset = cal.driftOffset ?? 0.0;
+
+        // Calculate distance traveled (scaled by the distance calibration factor)
         const wheelRotations = degrees / 360;
-        const distanceCm = wheelRotations * robotConfig.wheelCircumference;
-        
-        // Calculate number of steps
-        const numSteps = Math.max(2, Math.ceil(Math.abs(degrees) / 10));
-        
-        // Generate points along the straight line
-        for (let i = 0; i <= numSteps; i++) {
-            const t = i / numSteps;
-            const distance = distanceCm * t;
-            
-            // Calculate position
-            // Add 90° so that 0° points up instead of right
-            const angleRad = ((startAngle + 90) * Math.PI) / 180;
-            const x = startX + distance * Math.cos(angleRad);
-            // Y-axis increases upward, use standard mathematical convention
-            const y = startY + distance * Math.sin(angleRad);
-            
-            // Calculate wheel positions for visualization
-            const perpAngleRad = angleRad + Math.PI / 2;
-            const halfWheelBase = robotConfig.wheelBase / 2;
-            
-            points.push({
-                x: x,
-                y: y,
-                angle: startAngle,
-                leftWheelX: x + halfWheelBase * Math.cos(perpAngleRad),
-                leftWheelY: y + halfWheelBase * Math.sin(perpAngleRad),
-                rightWheelX: x - halfWheelBase * Math.cos(perpAngleRad),
-                rightWheelY: y - halfWheelBase * Math.sin(perpAngleRad)
-            });
+        const distanceCm = wheelRotations * robotConfig.wheelCircumference * distanceFactor;
+
+        const halfWheelBase = robotConfig.wheelBase / 2;
+
+        if (driftOffset === 0) {
+            // No drift: the move is a true straight line. Closed-form interpolation.
+            const numSteps = Math.max(2, Math.ceil(Math.abs(degrees) / 10));
+
+            // Generate points along the straight line
+            for (let i = 0; i <= numSteps; i++) {
+                const t = i / numSteps;
+                const distance = distanceCm * t;
+
+                // Calculate position
+                // Add 90° so that 0° points up instead of right
+                const angleRad = ((startAngle + 90) * Math.PI) / 180;
+                const x = startX + distance * Math.cos(angleRad);
+                // Y-axis increases upward, use standard mathematical convention
+                const y = startY + distance * Math.sin(angleRad);
+
+                // Calculate wheel positions for visualization
+                const perpAngleRad = angleRad + Math.PI / 2;
+
+                points.push({
+                    x: x,
+                    y: y,
+                    angle: startAngle,
+                    leftWheelX: x + halfWheelBase * Math.cos(perpAngleRad),
+                    leftWheelY: y + halfWheelBase * Math.sin(perpAngleRad),
+                    rightWheelX: x - halfWheelBase * Math.cos(perpAngleRad),
+                    rightWheelY: y - halfWheelBase * Math.sin(perpAngleRad)
+                });
+            }
+        } else {
+            // Drift present: the heading evolves as the robot travels, so the "straight"
+            // move becomes a gentle arc. Integrate incrementally (forward Euler), matching
+            // the arc branch's update order. driftOffset is degrees per metre; the heading
+            // change after travelling d cm is driftOffset * (d / 100) degrees. A positive
+            // driftOffset must curve right, and in this file's convention a right turn is a
+            // NEGATIVE angle change, so the drift sign is -1.
+            const numSteps = Math.max(2, Math.ceil(Math.abs(degrees) / 5));
+            const deltaDistance = distanceCm / numSteps; // signed (negative for backward moves)
+
+            let currentX = startX;
+            let currentY = startY;
+            let currentAngle = startAngle;
+
+            for (let i = 0; i <= numSteps; i++) {
+                if (i > 0) {
+                    // Move one step along the current heading, then update the heading.
+                    const stepAngleRad = ((currentAngle + 90) * Math.PI) / 180;
+                    currentX += deltaDistance * Math.cos(stepAngleRad);
+                    currentY += deltaDistance * Math.sin(stepAngleRad);
+                    currentAngle += -1 * driftOffset * (deltaDistance / 100);
+                }
+
+                // Calculate wheel positions for visualization
+                const angleRad = ((currentAngle + 90) * Math.PI) / 180;
+                const perpAngleRad = angleRad + Math.PI / 2;
+
+                points.push({
+                    x: currentX,
+                    y: currentY,
+                    angle: currentAngle,
+                    leftWheelX: currentX + halfWheelBase * Math.cos(perpAngleRad),
+                    leftWheelY: currentY + halfWheelBase * Math.sin(perpAngleRad),
+                    rightWheelX: currentX - halfWheelBase * Math.cos(perpAngleRad),
+                    rightWheelY: currentY - halfWheelBase * Math.sin(perpAngleRad)
+                });
+            }
         }
-        
+
         return points;
     }
     
     calculateArcMove(startX, startY, startAngle, direction, degrees, robotConfig) {
         const points = [];
-        
+
+        // Calibration: turnFactor scales the angular change (default 1.0 = no correction).
+        const cal = robotConfig.calibration || {};
+        const turnFactor = cal.turnFactor ?? 1.0;
+
         // Spike Prime movement behavior:
         // - "degrees" parameter specifies the FASTER motor's rotation
         // - The slower motor gets reduced by: (100 - direction * 2) / 100
@@ -182,7 +231,7 @@ class PathCalculator {
             // Turning in place (both wheels move equal distances in opposite directions)
             for (let i = 0; i <= numSteps; i++) {
                 const t = i / numSteps;
-                const angle = startAngle + deltaAngle * t;
+                const angle = startAngle + deltaAngle * turnFactor * t;
                 
                 // Calculate wheel positions for visualization
                 // Add 90° so that 0° points up instead of right
@@ -222,8 +271,8 @@ class PathCalculator {
                     const deltaLeft = leftDist - prevLeftDist;
                     const deltaRight = rightDist - prevRightDist;
                     
-                    // Calculate change in angle
-                    const deltaTheta = (deltaRight - deltaLeft) / robotConfig.wheelBase;
+                    // Calculate change in angle (scaled by the turn calibration factor)
+                    const deltaTheta = ((deltaRight - deltaLeft) / robotConfig.wheelBase) * turnFactor;
                     
                     // Calculate change in position (using average distance and current angle)
                     const deltaDistance = (deltaLeft + deltaRight) / 2;

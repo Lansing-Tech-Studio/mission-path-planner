@@ -14,7 +14,10 @@ describe('RobotConfig', () => {
       '<input id="robotImageUrl" value="" />' +
       '<input id="startX" value="33" />' +
       '<input id="startY" value="3.3" />' +
-      '<input id="startAngle" value="0" />';
+      '<input id="startAngle" value="0" />' +
+      '<input id="calDistanceFactor" value="1" />' +
+      '<input id="calTurnFactor" value="1" />' +
+      '<input id="calDriftOffset" value="0" />';
     RobotConfig = require('../../js/robot.js');
     robotConfig = new RobotConfig();
   });
@@ -38,6 +41,21 @@ describe('RobotConfig', () => {
       const config = robotConfig.getConfig();
       expect(config.length).toBe(20);
     });
+
+    it('should emit a calibration profile from the inputs (Req 2.1)', () => {
+      document.getElementById('calDistanceFactor').value = '1.2';
+      document.getElementById('calTurnFactor').value = '0.9';
+      document.getElementById('calDriftOffset').value = '5';
+      const config = robotConfig.getConfig();
+      expect(config.calibration).toEqual({ distanceFactor: 1.2, turnFactor: 0.9, driftOffset: 5 });
+    });
+
+    it('should fall back to calibration defaults for blank inputs', () => {
+      document.getElementById('calDistanceFactor').value = '';
+      document.getElementById('calDriftOffset').value = '';
+      const config = robotConfig.getConfig();
+      expect(config.calibration).toEqual({ distanceFactor: 1.0, turnFactor: 1.0, driftOffset: 0.0 });
+    });
   });
 
   describe('loadConfig', () => {
@@ -59,6 +77,22 @@ describe('RobotConfig', () => {
       expect(document.getElementById('robotLength').value).toBe('18');
       expect(document.getElementById('startX').value).toBe('50');
       expect(document.getElementById('startAngle').value).toBe('90');
+    });
+
+    it('should round-trip calibration through getConfig/loadConfig (Req 2.6)', () => {
+      const profile = { distanceFactor: 1.3, turnFactor: 0.8, driftOffset: -10 };
+      robotConfig.loadConfig({ ...robotConfig.getConfig(), calibration: profile });
+      expect(robotConfig.getConfig().calibration).toEqual(profile);
+    });
+
+    it('should substitute calibration defaults for legacy configs lacking the field (Req 2.3)', () => {
+      document.getElementById('calDistanceFactor').value = '1.5';
+      robotConfig.loadConfig({ length: 18 }); // no calibration field
+      expect(robotConfig.getConfig().calibration).toEqual({
+        distanceFactor: 1.0,
+        turnFactor: 1.0,
+        driftOffset: 0.0
+      });
     });
   });
 

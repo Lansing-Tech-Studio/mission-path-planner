@@ -28,6 +28,7 @@
           cairo
           alsa-lib
           mesa
+          libgbm # split out of mesa in nixpkgs 25.05; Chromium needs libgbm.so.1
           xorg.libX11
           xorg.libXcomposite
           xorg.libXdamage

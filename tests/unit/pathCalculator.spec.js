@@ -115,6 +115,109 @@ describe('PathCalculator', () => {
     });
   });
 
+  describe('calibration', () => {
+    const withCal = (cal) => ({ ...robotConfig, calibration: cal });
+    const last = (points) => points[points.length - 1];
+
+    describe('distanceFactor (Req 4)', () => {
+      it('is identity at 1.0', () => {
+        const base = calculator.calculateStraightMove(30, 30, 0, 360, robotConfig);
+        const cal = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ distanceFactor: 1.0 }));
+        expect(last(cal).x).toBeCloseTo(last(base).x, 5);
+        expect(last(cal).y).toBeCloseTo(last(base).y, 5);
+      });
+
+      it('ends at distance k x d from the start', () => {
+        // 360 deg = one rotation = wheelCircumference cm; start y = 30, heading up.
+        const k = 1.5;
+        const points = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ distanceFactor: k }));
+        expect(last(points).y).toBeCloseTo(30 + robotConfig.wheelCircumference * k, 4);
+        expect(last(points).x).toBeCloseTo(30, 4);
+      });
+
+      it('is monotonic: larger factor travels farther', () => {
+        const near = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ distanceFactor: 0.8 }));
+        const far = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ distanceFactor: 1.6 }));
+        expect(last(far).y).toBeGreaterThan(last(near).y);
+      });
+    });
+
+    describe('turnFactor (Req 5)', () => {
+      it('is identity at 1.0 for an arc', () => {
+        const base = calculator.calculateArcMove(30, 30, 0, 50, 720, robotConfig);
+        const cal = calculator.calculateArcMove(30, 30, 0, 50, 720, withCal({ turnFactor: 1.0 }));
+        expect(last(cal).angle).toBeCloseTo(last(base).angle, 5);
+        expect(last(cal).x).toBeCloseTo(last(base).x, 5);
+        expect(last(cal).y).toBeCloseTo(last(base).y, 5);
+      });
+
+      it('scales pivot heading change by k (final heading = k x theta)', () => {
+        const base = calculator.calculateArcMove(30, 30, 0, 100, 360, withCal({ turnFactor: 1.0 }));
+        const scaled = calculator.calculateArcMove(30, 30, 0, 100, 360, withCal({ turnFactor: 2.0 }));
+        expect(last(scaled).angle).toBeCloseTo(last(base).angle * 2, 4);
+      });
+
+      it('is monotonic on a pivot', () => {
+        const small = calculator.calculateArcMove(30, 30, 0, 100, 360, withCal({ turnFactor: 0.6 }));
+        const big = calculator.calculateArcMove(30, 30, 0, 100, 360, withCal({ turnFactor: 1.8 }));
+        expect(Math.abs(last(big).angle)).toBeGreaterThan(Math.abs(last(small).angle));
+      });
+    });
+
+    describe('driftOffset (Req 6)', () => {
+      it('is identity at 0.0', () => {
+        const base = calculator.calculateStraightMove(30, 30, 0, 360, robotConfig);
+        const cal = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ driftOffset: 0.0 }));
+        expect(last(cal).x).toBeCloseTo(last(base).x, 5);
+        expect(last(cal).y).toBeCloseTo(last(base).y, 5);
+        expect(last(cal).angle).toBe(last(base).angle);
+      });
+
+      it('curves right for positive drift (x increases, heading negative)', () => {
+        const points = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ driftOffset: 30 }));
+        expect(last(points).x).toBeGreaterThan(30);
+        expect(last(points).angle).toBeLessThan(0);
+      });
+
+      it('curves left for negative drift (x decreases, heading positive)', () => {
+        const points = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ driftOffset: -30 }));
+        expect(last(points).x).toBeLessThan(30);
+        expect(last(points).angle).toBeGreaterThan(0);
+      });
+
+      it('total heading change = -driftOffset x (distance/100) degrees', () => {
+        const drift = 45;
+        const points = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ driftOffset: drift }));
+        const expected = -1 * drift * (robotConfig.wheelCircumference / 100);
+        expect(last(points).angle).toBeCloseTo(expected, 5);
+      });
+
+      it('heading change is proportional to distance (linearity)', () => {
+        const oneRot = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ driftOffset: 20 }));
+        const twoRot = calculator.calculateStraightMove(30, 30, 0, 720, withCal({ driftOffset: 20 }));
+        expect(last(twoRot).angle).toBeCloseTo(last(oneRot).angle * 2, 4);
+      });
+
+      it('is signed with travel direction: reverse mirrors the drift (decision 2)', () => {
+        const forward = calculator.calculateStraightMove(30, 30, 0, 360, withCal({ driftOffset: 45 }));
+        const backward = calculator.calculateStraightMove(30, 30, 0, -360, withCal({ driftOffset: 45 }));
+        expect(last(forward).angle).toBeCloseTo(-last(backward).angle, 5);
+        expect(last(forward).angle).toBeLessThan(0);
+        expect(last(backward).angle).toBeGreaterThan(0);
+      });
+    });
+
+    it('does not mutate robotConfig dimensions (Req 7)', () => {
+      const cfg = withCal({ distanceFactor: 1.5, turnFactor: 1.5, driftOffset: 20 });
+      calculator.calculatePath([
+        { type: 'move', direction: 0, degrees: 360, valid: true },
+        { type: 'move', direction: 50, degrees: 360, valid: true }
+      ], cfg);
+      expect(cfg.wheelBase).toBe(robotConfig.wheelBase);
+      expect(cfg.wheelCircumference).toBe(robotConfig.wheelCircumference);
+    });
+  });
+
   describe('calculatePath', () => {
     it('should return empty path for empty program', () => {
       const result = calculator.calculatePath([], robotConfig);

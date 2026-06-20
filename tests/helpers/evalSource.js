@@ -50,6 +50,9 @@ function createMinimalDOM() {
         <input type="number" id="startX" value="33" />
         <input type="number" id="startY" value="3.3" />
         <input type="number" id="startAngle" value="0" />
+        <input type="number" id="calDistanceFactor" value="1" />
+        <input type="number" id="calTurnFactor" value="1" />
+        <input type="number" id="calDriftOffset" value="0" />
         <select id="matSelect"><option value="blank">Blank</option></select>
         <input type="text" id="customMatUrl" value="" />
         <select id="matAlignment"><option value="centered">Centered</option></select>

@@ -23,6 +23,7 @@ class MissionPlanner {
         this.pathCalculator = new PathCalculator();
         this.storage = new StorageManager();
         this.print = new PrintManager();
+        this.calibration = new CalibrationManager();
         
         // Set up event listeners
         this.setupEventListeners();
@@ -286,7 +287,27 @@ class MissionPlanner {
                 });
             }
         });
-        
+
+        // Calibration inputs: validate inline, and only recalculate when all values are
+        // valid so an out-of-range value never reaches the path calculation.
+        const calibrationInputs = ['calDistanceFactor', 'calTurnFactor', 'calDriftOffset'];
+        calibrationInputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => {
+                    if (this.validateCalibrationInputs()) {
+                        this.update();
+                    }
+                });
+            }
+        });
+
+        // Reset calibration to defaults
+        const resetCalibrationBtn = document.getElementById('resetCalibrationBtn');
+        if (resetCalibrationBtn) {
+            resetCalibrationBtn.addEventListener('click', () => this.resetCalibration());
+        }
+
         // Mat selection
         const matSelect = document.getElementById('matSelect');
         const customMatUrlGroup = document.getElementById('customMatUrlGroup');
@@ -412,7 +433,58 @@ class MissionPlanner {
         // Auto-save current state
         this.autoSave();
     }
-    
+
+    // Validates the three calibration inputs, showing/clearing inline errors per field.
+    // Returns true only when every field is within range.
+    validateCalibrationInputs() {
+        const fields = [
+            { id: 'calDistanceFactor', key: 'distanceFactor' },
+            { id: 'calTurnFactor', key: 'turnFactor' },
+            { id: 'calDriftOffset', key: 'driftOffset' }
+        ];
+
+        // Build a profile from raw input values (NaN for blank/non-numeric so it fails validation).
+        const profile = {};
+        fields.forEach(({ id, key }) => {
+            const el = document.getElementById(id);
+            profile[key] = el ? parseFloat(el.value) : NaN;
+        });
+
+        const { errors } = this.calibration.validate(profile);
+
+        let allValid = true;
+        fields.forEach(({ id, key }) => {
+            const el = document.getElementById(id);
+            const errorEl = document.getElementById(`${id}Error`);
+            const label = this.calibration.labels[key];
+            const fieldError = errors.find(msg => msg.startsWith(label));
+            if (fieldError) {
+                allValid = false;
+                if (el) el.classList.add('invalid');
+                if (errorEl) errorEl.textContent = fieldError;
+            } else {
+                if (el) el.classList.remove('invalid');
+                if (errorEl) errorEl.textContent = '';
+            }
+        });
+
+        return allValid;
+    }
+
+    // Resets calibration inputs to their default values and recalculates.
+    resetCalibration() {
+        const defaults = this.calibration.getDefault();
+        const setField = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        };
+        setField('calDistanceFactor', defaults.distanceFactor);
+        setField('calTurnFactor', defaults.turnFactor);
+        setField('calDriftOffset', defaults.driftOffset);
+        this.validateCalibrationInputs();
+        this.update();
+    }
+
     getMatUrl() {
         const matSelect = document.getElementById('matSelect').value;
         
