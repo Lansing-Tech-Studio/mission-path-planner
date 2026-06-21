@@ -12,6 +12,44 @@ describe('CanvasRenderer', () => {
     renderer = new CanvasRenderer();
   });
 
+  it('uses a uniform coordinate scale on the default (blank) mat', () => {
+    // No manual matVisualWidth override: X and Y cm->px scales must match so the
+    // robot and arcs are not stretched on the blank mat.
+    expect(renderer.getCoordScaleX()).toBeCloseTo(renderer.getCoordScaleY(), 6);
+  });
+
+  it('scales the canvas backing store by devicePixelRatio for crisp output', () => {
+    const original = window.devicePixelRatio;
+    Object.defineProperty(window, 'devicePixelRatio', { value: 2, configurable: true });
+
+    renderer.updateCanvasSize();
+
+    expect(renderer.displayWidth).toBeGreaterThan(0);
+    expect(renderer.displayHeight).toBeGreaterThan(0);
+    // Backing store is 2x the CSS size; CSS size unchanged.
+    expect(renderer.canvas.width).toBe(Math.round(renderer.displayWidth * 2));
+    expect(renderer.canvas.height).toBe(Math.round(renderer.displayHeight * 2));
+    expect(renderer.canvas.style.width).toBe(renderer.displayWidth + 'px');
+    expect(renderer.canvas.style.height).toBe(renderer.displayHeight + 'px');
+
+    Object.defineProperty(window, 'devicePixelRatio', { value: original, configurable: true });
+  });
+
+  it('caps the number of robot-body outlines drawn along a long path', () => {
+    const robot = { length: 20, width: 15, wheelOffset: 3, startX: 30, startY: 30, startAngle: 0 };
+    const points = [];
+    for (let i = 0; i < 500; i++) {
+      points.push({ x: 30 + i * 0.1, y: 30, angle: 0, segmentEnd: i === 499 });
+    }
+    const path = { points, valid: true };
+
+    const spy = jest.spyOn(renderer, 'drawRobotOutline');
+    renderer.drawPathBodyAndLine(path, robot);
+
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(64);
+    expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('updates mat alignment and offsets correctly', () => {
     renderer.matVisualWidth = renderer.tableWidth / 2; // simulate narrower mat
     renderer.updateMatAlignment('centered');
@@ -95,7 +133,7 @@ describe('CanvasRenderer', () => {
     global.Image = ErrorImage;
 
     const spyErr = jest.spyOn(console, 'error');
-    const prevWidth = renderer.tableWidth;
+    const prevWidth = renderer.defaultMatVisualWidth;
     renderer.matVisualWidth = 123; // non-default to see reset
     renderer.loadMatImage('http://invalid.example/mat.png');
     expect(spyErr).toHaveBeenCalled();

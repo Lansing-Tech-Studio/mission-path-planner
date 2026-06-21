@@ -240,38 +240,32 @@ class BlockManager {
         return true;
     }
     
-    calculatePositionAtBlock(blockIndex) {
-        // Calculate robot position after executing all move blocks up to this point
+    // Walk the program once and return the robot position BEFORE each block, plus the
+    // final position at index === blocks.length. result[i] is the pose entering block i.
+    // O(n) — callers that need several block positions in one render should use this
+    // instead of calling calculatePositionAtBlock per block (which is O(n) each).
+    calculateAllBlockPositions() {
         if (!window.missionPlanner || !window.missionPlanner.pathCalculator || !window.missionPlanner.robot) {
-            return null;
+            return this.blocks.map(() => null);
         }
-        
+
         const robotConfig = window.missionPlanner.robot.getConfig();
+        const pathCalculator = window.missionPlanner.pathCalculator;
         // Convert bottom-left corner coordinates to axle center
         let x = robotConfig.startX + robotConfig.width / 2;
         let y = robotConfig.startY + robotConfig.wheelOffset;
         let angle = robotConfig.startAngle;
-        
-        // Process all blocks up to (but not including) the current block
-        for (let i = 0; i < blockIndex && i < this.blocks.length; i++) {
+
+        const positions = [];
+        for (let i = 0; i < this.blocks.length; i++) {
+            positions[i] = { x, y, angle }; // pose entering block i
+
             const block = this.blocks[i];
-            
             if (block.type === 'move' && block.valid !== false) {
-                const moveBlock = {
-                    type: 'move',
-                    direction: parseFloat(block.direction) || 0,
-                    degrees: parseFloat(block.degrees) || 0,
-                    valid: this.validateMoveBlock(block)
-                };
-                
-                if (moveBlock.valid) {
-                    const points = window.missionPlanner.pathCalculator.calculateMoveBlock(
-                        x, y, angle,
-                        moveBlock.direction,
-                        moveBlock.degrees,
-                        robotConfig
-                    );
-                    
+                const direction = parseFloat(block.direction) || 0;
+                const degrees = parseFloat(block.degrees) || 0;
+                if (this.validateMoveBlock(block)) {
+                    const points = pathCalculator.calculateMoveBlock(x, y, angle, direction, degrees, robotConfig);
                     if (points.length > 0) {
                         const lastPoint = points[points.length - 1];
                         x = lastPoint.x;
@@ -281,8 +275,22 @@ class BlockManager {
                 }
             }
         }
-        
-        return { x, y, angle };
+        // Final pose after the last block.
+        positions[this.blocks.length] = { x, y, angle };
+
+        return positions;
+    }
+
+    calculatePositionAtBlock(blockIndex) {
+        // Calculate robot position after executing all move blocks up to this point
+        if (!window.missionPlanner || !window.missionPlanner.pathCalculator || !window.missionPlanner.robot) {
+            return null;
+        }
+
+        const positions = this.calculateAllBlockPositions();
+        // Clamp so indices at/after the end return the final pose (legacy behavior).
+        const idx = Math.max(0, Math.min(blockIndex, this.blocks.length));
+        return positions[idx];
     }
     
     renderBlocks() {
@@ -296,13 +304,16 @@ class BlockManager {
             return;
         }
         
+        // Compute all block positions once (O(n)) so per-block "show position" markers
+        // don't each re-simulate the prefix (which would be O(n^2)).
+        const positions = this.calculateAllBlockPositions();
         this.blocks.forEach((block, index) => {
-            const blockElement = this.createBlockElement(block, index);
+            const blockElement = this.createBlockElement(block, index, positions[index]);
             this.container.appendChild(blockElement);
         });
     }
-    
-    createBlockElement(block, index) {
+
+    createBlockElement(block, index, precomputedPosition) {
         const div = document.createElement('div');
         div.className = `program-block ${block.type}-block`;
         div.dataset.blockId = block.id;
@@ -352,7 +363,9 @@ class BlockManager {
             
             // Display position info if enabled
             if (block.showPosition) {
-                const position = this.calculatePositionAtBlock(index);
+                const position = precomputedPosition !== undefined
+                    ? precomputedPosition
+                    : this.calculatePositionAtBlock(index);
                 if (position) {
                     const positionInfo = document.createElement('div');
                     positionInfo.className = 'block-position-info';

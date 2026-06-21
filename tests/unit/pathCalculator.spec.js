@@ -106,12 +106,40 @@ describe('PathCalculator', () => {
 
     it('should handle gentle curves with small direction values', () => {
       const points = calculator.calculateArcMove(30, 30, 0, 10, 360, robotConfig);
-      
+
       const lastPoint = points[points.length - 1];
-      
+
       // Should move mostly forward with slight turn
       expect(lastPoint.y).toBeGreaterThan(30);
       expect(Math.abs(lastPoint.angle)).toBeLessThan(30); // Gentle turn
+    });
+
+    it('keeps every arc point on the true constant-radius circle (midpoint integration)', () => {
+      // A constant-steering arc has a fixed instantaneous centre of curvature (ICC);
+      // every pose along it must be exactly |R| from that centre. Forward-Euler
+      // integration drifts off the circle; midpoint integration stays on it.
+      const direction = 30;
+      const degrees = 360;
+      const startX = 0, startY = 0, startAngle = 0;
+      const points = calculator.calculateArcMove(startX, startY, startAngle, direction, degrees, robotConfig);
+
+      // Closed-form ICC from the wheel distances.
+      const leftDeg = degrees;
+      const rightDeg = degrees * ((100 - direction * 2) / 100);
+      const dL = (leftDeg / 360) * robotConfig.wheelCircumference;
+      const dR = (rightDeg / 360) * robotConfig.wheelCircumference;
+      const dTheta = (dR - dL) / robotConfig.wheelBase;          // signed, radians
+      const Rsigned = ((dL + dR) / 2) / dTheta;                  // signed radius
+      const H = ((startAngle + 90) * Math.PI) / 180;            // world heading
+      const cx = startX + Rsigned * -Math.sin(H);                // ICC = start + R * left-perp
+      const cy = startY + Rsigned * Math.cos(H);
+
+      let maxErr = 0;
+      points.forEach((p) => {
+        const d = Math.hypot(p.x - cx, p.y - cy);
+        maxErr = Math.max(maxErr, Math.abs(d - Math.abs(Rsigned)));
+      });
+      expect(maxErr).toBeLessThan(0.02);
     });
   });
 

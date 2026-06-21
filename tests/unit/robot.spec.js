@@ -36,10 +36,14 @@ describe('RobotConfig', () => {
       expect(config.startAngle).toBe(0);
     });
 
-    it('should use defaults for empty inputs', () => {
+    it('should use defaults for empty inputs (canonical robot defaults)', () => {
       document.getElementById('robotLength').value = '';
+      document.getElementById('wheelBase').value = '';
       const config = robotConfig.getConfig();
-      expect(config.length).toBe(20);
+      // Blank-field fallbacks match the constructor's canonical defaults rather than
+      // a separate ad-hoc set.
+      expect(config.length).toBe(16.5);
+      expect(config.wheelBase).toBe(13.3);
     });
 
     it('should emit a calibration profile from the inputs (Req 2.1)', () => {

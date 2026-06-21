@@ -121,6 +121,42 @@ describe('BlockManager DOM behaviors', () => {
     expect(block.direction).toBe(50);
   });
 
+  it('calculateAllBlockPositions matches calculatePositionAtBlock for every index in one pass', () => {
+    const PathCalculator = require('../../js/pathCalculator.js');
+    const realCalc = new PathCalculator();
+    const getConfig = () => ({
+      startX: 30, startY: 30, startAngle: 0,
+      width: 15, wheelOffset: 5, wheelBase: 12, wheelCircumference: 17.6, length: 20
+    });
+    window.missionPlanner = {
+      update: jest.fn(),
+      pathCalculator: realCalc,
+      robot: { getConfig }
+    };
+
+    bm.loadProgram([
+      { type: 'text', content: 'a', showPosition: true },
+      { type: 'move', direction: 0, degrees: 360 },
+      { type: 'text', content: 'b', showPosition: true },
+      { type: 'move', direction: 50, degrees: 360 },
+      { type: 'text', content: 'c', showPosition: true }
+    ]);
+
+    // Single pass should make exactly one calculateMoveBlock call per valid move.
+    const calcSpy = jest.spyOn(realCalc, 'calculateMoveBlock');
+    const all = bm.calculateAllBlockPositions();
+    expect(calcSpy.mock.calls.length).toBe(2); // two move blocks, walked once
+
+    // Positions agree with the (O(n^2)) per-index method for every index, plus the
+    // final position at index === length.
+    for (let i = 0; i <= bm.blocks.length; i++) {
+      const single = bm.calculatePositionAtBlock(i);
+      expect(all[i].x).toBeCloseTo(single.x, 6);
+      expect(all[i].y).toBeCloseTo(single.y, 6);
+      expect(all[i].angle).toBeCloseTo(single.angle, 6);
+    }
+  });
+
   it('updates DOM textarea when text block content is updated', () => {
     const text = bm.addTextBlock();
     const blockEl = container.querySelector(`.program-block[data-block-id="${text.id}"]`);

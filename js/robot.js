@@ -1,16 +1,23 @@
 // Robot Configuration Management
+
+// Canonical default robot dimensions/position. Single source of truth shared by the
+// constructor and getConfig()'s blank-field fallbacks so they can't drift apart.
+const ROBOT_DEFAULTS = {
+    length: 16.5,
+    width: 15,
+    wheelOffset: 3.1,
+    wheelCircumference: 19.6,
+    wheelBase: 13.3,
+    startX: 30,  // Bottom-left corner X
+    startY: 0,   // Bottom-left corner Y
+    startAngle: 0
+};
+
 class RobotConfig {
     constructor() {
         this.config = {
-            length: 16.5,
-            width: 15,
-            wheelOffset: 3.1,
-            wheelCircumference: 19.6,
-            wheelBase: 13.3,
-            imageUrl: '',
-            startX: 30,  // Bottom-left corner X
-            startY: 0,   // Bottom-left corner Y
-            startAngle: 0
+            ...ROBOT_DEFAULTS,
+            imageUrl: ''
         };
 
         // Calibration manager owns the calibration defaults and validation. Resolve it
@@ -95,15 +102,15 @@ class RobotConfig {
         const imageUrlVal = document.getElementById('robotImageUrl').value;
 
         return {
-            length: lengthVal === '' ? 20 : parseFloat(lengthVal),
-            width: widthVal === '' ? 15 : parseFloat(widthVal),
-            wheelOffset: wheelOffsetVal === '' ? 5 : parseFloat(wheelOffsetVal),
-            wheelCircumference: wheelCircumferenceVal === '' ? 17.6 : parseFloat(wheelCircumferenceVal),
-            wheelBase: wheelBaseVal === '' ? 12 : parseFloat(wheelBaseVal),
+            length: lengthVal === '' ? ROBOT_DEFAULTS.length : parseFloat(lengthVal),
+            width: widthVal === '' ? ROBOT_DEFAULTS.width : parseFloat(widthVal),
+            wheelOffset: wheelOffsetVal === '' ? ROBOT_DEFAULTS.wheelOffset : parseFloat(wheelOffsetVal),
+            wheelCircumference: wheelCircumferenceVal === '' ? ROBOT_DEFAULTS.wheelCircumference : parseFloat(wheelCircumferenceVal),
+            wheelBase: wheelBaseVal === '' ? ROBOT_DEFAULTS.wheelBase : parseFloat(wheelBaseVal),
             imageUrl: imageUrlVal || '',
-            startX: startXValue !== '' ? parseFloat(startXValue) : 30,
-            startY: startYValue !== '' ? parseFloat(startYValue) : 30,
-            startAngle: startAngleValue !== '' ? parseFloat(startAngleValue) : 0,
+            startX: startXValue !== '' ? parseFloat(startXValue) : ROBOT_DEFAULTS.startX,
+            startY: startYValue !== '' ? parseFloat(startYValue) : ROBOT_DEFAULTS.startY,
+            startAngle: startAngleValue !== '' ? parseFloat(startAngleValue) : ROBOT_DEFAULTS.startAngle,
             calibration: this.getCalibration()
         };
     }

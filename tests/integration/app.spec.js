@@ -110,6 +110,30 @@ describe('MissionPlanner Integration', () => {
     mission = new window.MissionPlanner();
   });
 
+  it('scheduleUpdate coalesces multiple calls into a single rAF update', () => {
+    const cbs = [];
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cbs.push(cb);
+      return cbs.length;
+    });
+    const updateSpy = jest.spyOn(mission, 'update').mockImplementation(() => {});
+
+    mission.scheduleUpdate();
+    mission.scheduleUpdate();
+    mission.scheduleUpdate();
+
+    // Nothing runs until the frame fires.
+    expect(updateSpy).not.toHaveBeenCalled();
+
+    cbs.forEach((cb) => cb());
+
+    // Three schedules collapse into one render.
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+
+    rafSpy.mockRestore();
+    updateSpy.mockRestore();
+  });
+
   it('switches tabs and toggles classes', () => {
     const setupBtn = document.querySelector('button[data-tab="setup"]');
     const programBtn = document.querySelector('button[data-tab="program"]');

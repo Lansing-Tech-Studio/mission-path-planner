@@ -14,9 +14,16 @@ class CanvasRenderer {
         // This is what user coordinates are relative to
         this.matCoordWidth = 236; // cm (2360mm)
         this.matCoordHeight = 114; // cm (1140mm)
-        
+
+        // Default visual width for a blank mat (or after an image load fails).
+        // Derived so the coordinate->pixel scale is the SAME in X and Y (uniform):
+        // matVisualWidth/matCoordWidth === matVisualHeight/matCoordHeight when
+        // matVisualHeight is the full table height. Using tableWidth here instead
+        // would stretch X vs Y (~3.5%), distorting the robot and arcs.
+        this.defaultMatVisualWidth = this.tableHeight * (this.matCoordWidth / this.matCoordHeight);
+
         // Mat visual dimensions (will be adjusted based on image aspect ratio)
-        this.matVisualWidth = this.tableWidth; // Will be adjusted when image loads
+        this.matVisualWidth = this.defaultMatVisualWidth; // Adjusted when an image loads
         this.matVisualHeight = this.tableHeight; // Always 4 feet
         
         // Mat offset from table origin (top-left)
@@ -84,19 +91,41 @@ class CanvasRenderer {
         this.scale = scale;
         const canvasWidth = this.tableWidth * this.scale;
         const canvasHeight = this.tableHeight * this.scale;
-        
-        // Set both buffer size and CSS size to match (no letterboxing)
-        this.canvas.width = canvasWidth;
-        this.canvas.height = canvasHeight;
+
+        // CSS (logical) size used by all drawing/coordinate math.
+        this.displayWidth = canvasWidth;
+        this.displayHeight = canvasHeight;
+
+        // Render the backing store at devicePixelRatio so lines/dots stay crisp on
+        // HiDPI/retina displays, then scale the context so drawing code can keep
+        // working in CSS pixels. Setting canvas.width resets the transform, so the
+        // context scale is (re)applied here every time.
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+        this.canvas.width = Math.round(canvasWidth * dpr);
+        this.canvas.height = Math.round(canvasHeight * dpr);
         this.canvas.style.width = canvasWidth + 'px';
         this.canvas.style.height = canvasHeight + 'px';
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         
-        // Trigger re-render if mission planner exists
+        // Trigger re-render if mission planner exists. Resize fires in rapid bursts,
+        // so batch through scheduleUpdate when available.
         if (window.missionPlanner) {
-            window.missionPlanner.update();
+            this.requestPlannerUpdate();
         }
     }
-    
+
+    // Ask the planner to re-render, coalescing bursts via scheduleUpdate when present.
+    // Falls back to update() (e.g. for the stubbed planner in unit tests).
+    requestPlannerUpdate() {
+        const planner = window.missionPlanner;
+        if (!planner) return;
+        if (typeof planner.scheduleUpdate === 'function') {
+            planner.scheduleUpdate();
+        } else {
+            planner.update();
+        }
+    }
+
     setupDragging() {
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
@@ -385,11 +414,9 @@ class CanvasRenderer {
             
             // Update form input
             document.getElementById('startAngle').value = snappedAngle;
-            
-            // Trigger update
-            if (window.missionPlanner) {
-                window.missionPlanner.update();
-            }
+
+            // Trigger update (batched per frame during the drag)
+            this.requestPlannerUpdate();
         } else if (this.isDragging && this.robotConfig) {
             // Calculate new robot position maintaining the offset from where user clicked
             const newX = matX - this.dragOffsetX;
@@ -402,11 +429,9 @@ class CanvasRenderer {
             // Update form inputs
             document.getElementById('startX').value = clampedX.toFixed(1);
             document.getElementById('startY').value = clampedY.toFixed(1);
-            
-            // Trigger update
-            if (window.missionPlanner) {
-                window.missionPlanner.update();
-            }
+
+            // Trigger update (batched per frame during the drag)
+            this.requestPlannerUpdate();
         } else if (this.robotConfig) {
             // Update cursor based on hover state
             const endDot = this.findEndDotAtPoint(matX, matY);
@@ -479,8 +504,8 @@ class CanvasRenderer {
         this.robotConfig = robotConfig;
         this.currentPath = path;
         
-        // Clear canvas
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Clear canvas (logical/CSS extent; the context is already DPR-scaled)
+        this.ctx.clearRect(0, 0, this.displayWidth, this.displayHeight);
         
         // Draw mat background
         this.drawMat(matUrl);
@@ -516,51 +541,59 @@ class CanvasRenderer {
     drawMat(matUrl) {
         // Draw table background (black)
         this.ctx.fillStyle = '#000000';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+        this.ctx.fillRect(0, 0, this.displayWidth, this.displayHeight);
+
         // Draw table border
         this.ctx.strokeStyle = '#333';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
-        
+        this.ctx.strokeRect(0, 0, this.displayWidth, this.displayHeight);
+
         // Calculate mat position on canvas
         const matCanvasX = this.matOffsetX * this.scale;
         const matCanvasY = this.matOffsetY * this.scale;
         const matCanvasW = this.matVisualWidth * this.scale;
         const matCanvasH = this.matVisualHeight * this.scale;
-        
-        // Draw mat area background (white)
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(matCanvasX, matCanvasY, matCanvasW, matCanvasH);
-        
-        // Draw grid on mat area for reference (based on coordinate space)
-        this.ctx.strokeStyle = '#e0e0e0';
-        this.ctx.lineWidth = 1;
-        
-        // Scale factor from coordinate space to visual space
-        const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
-        const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
-        
-        // Draw 10cm grid lines on mat (in coordinate space)
-        for (let x = 0; x <= this.matCoordWidth; x += 10) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(matCanvasX + x * coordToVisualX * this.scale, matCanvasY);
-            this.ctx.lineTo(matCanvasX + x * coordToVisualX * this.scale, matCanvasY + matCanvasH);
-            this.ctx.stroke();
+
+        // When a loaded image already covers the mat area, the white fill and grid
+        // would be painted over and wasted, so skip them. They still render as a
+        // placeholder while an image is loading or for the blank mat.
+        const hasImage = matUrl && matUrl.trim() !== '' &&
+            this.matImage && this.currentMatUrl === matUrl;
+
+        if (!hasImage) {
+            // Draw mat area background (white)
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fillRect(matCanvasX, matCanvasY, matCanvasW, matCanvasH);
+
+            // Draw grid on mat area for reference (based on coordinate space)
+            this.ctx.strokeStyle = '#e0e0e0';
+            this.ctx.lineWidth = 1;
+
+            // Scale factor from coordinate space to visual space
+            const coordToVisualX = this.matVisualWidth / this.matCoordWidth;
+            const coordToVisualY = this.matVisualHeight / this.matCoordHeight;
+
+            // Draw 10cm grid lines on mat (in coordinate space)
+            for (let x = 0; x <= this.matCoordWidth; x += 10) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(matCanvasX + x * coordToVisualX * this.scale, matCanvasY);
+                this.ctx.lineTo(matCanvasX + x * coordToVisualX * this.scale, matCanvasY + matCanvasH);
+                this.ctx.stroke();
+            }
+
+            for (let y = 0; y <= this.matCoordHeight; y += 10) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(matCanvasX, matCanvasY + y * coordToVisualY * this.scale);
+                this.ctx.lineTo(matCanvasX + matCanvasW, matCanvasY + y * coordToVisualY * this.scale);
+                this.ctx.stroke();
+            }
         }
-        
-        for (let y = 0; y <= this.matCoordHeight; y += 10) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(matCanvasX, matCanvasY + y * coordToVisualY * this.scale);
-            this.ctx.lineTo(matCanvasX + matCanvasW, matCanvasY + y * coordToVisualY * this.scale);
-            this.ctx.stroke();
-        }
-        
+
         // If mat URL is provided, load and draw image
         if (matUrl && matUrl.trim() !== '') {
             this.loadMatImage(matUrl);
         }
-        
+
         // Draw mat border (darker)
         this.ctx.strokeStyle = '#333';
         this.ctx.lineWidth = 2;
@@ -610,8 +643,8 @@ class CanvasRenderer {
         img.onerror = () => {
             console.error('Failed to load mat image:', url);
             this.matImage = null;
-            // Reset to default mat visual width
-            this.matVisualWidth = this.tableWidth;
+            // Reset to the uniform-scale default mat visual width
+            this.matVisualWidth = this.defaultMatVisualWidth;
             this.updateMatAlignment(this.matAlignment);
         };
         
@@ -626,10 +659,14 @@ class CanvasRenderer {
         
         const blocks = window.missionPlanner.blocks.blocks;
         let blockNumber = 1;
-        
+
+        // Compute every block's position in a single O(n) pass rather than re-simulating
+        // the prefix per ghost robot (which would be O(n^2)).
+        const positions = window.missionPlanner.blocks.calculateAllBlockPositions();
+
         blocks.forEach((block, index) => {
             if (block.type === 'text' && block.showPosition) {
-                const position = window.missionPlanner.blocks.calculatePositionAtBlock(index);
+                const position = positions[index];
                 if (position) {
                     this.drawGhostRobot(robotConfig, position.x, position.y, position.angle, blockNumber);
                     blockNumber++;
@@ -716,14 +753,24 @@ class CanvasRenderer {
     drawPathBodyAndLine(path, robotConfig) {
         if (!path.points || path.points.length === 0) return;
         
-        // Draw robot body outline along path (lighter, wider) - first layer
+        // Draw robot body outline along path (lighter, wider) - first layer.
+        // Cap the number of outlines so a long program doesn't redraw thousands of
+        // rotated rectangles every frame; the corridor still reads as continuous.
         this.ctx.fillStyle = 'rgba(76, 175, 80, 0.12)';
         this.ctx.strokeStyle = 'rgba(76, 175, 80, 0.25)';
         this.ctx.lineWidth = 1;
-        
-        for (let i = 0; i < path.points.length; i++) {
+
+        const maxOutlines = 60;
+        const outlineStep = Math.max(1, Math.ceil(path.points.length / maxOutlines));
+        for (let i = 0; i < path.points.length; i += outlineStep) {
             const point = path.points[i];
             this.drawRobotOutline(robotConfig, point.x, point.y, point.angle);
+        }
+        // Always include the final pose so the corridor reaches the end point.
+        const lastIdx = path.points.length - 1;
+        if (lastIdx % outlineStep !== 0) {
+            const last = path.points[lastIdx];
+            this.drawRobotOutline(robotConfig, last.x, last.y, last.angle);
         }
         
         // Draw center path line (darker, thinner) - second layer

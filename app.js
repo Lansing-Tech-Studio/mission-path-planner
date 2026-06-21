@@ -414,6 +414,27 @@ class MissionPlanner {
         });
     }
     
+    // Coalesce bursts of updates (drag, rotate, continuous resize) into one render per
+    // animation frame so high-frequency events don't trigger a full recompute+redraw
+    // per event. Falls back to a synchronous update where rAF is unavailable.
+    scheduleUpdate() {
+        if (this._updateScheduled) return;
+
+        const raf = (typeof window !== 'undefined' && window.requestAnimationFrame)
+            ? window.requestAnimationFrame.bind(window)
+            : null;
+
+        if (raf) {
+            this._updateScheduled = true;
+            raf(() => {
+                this._updateScheduled = false;
+                this.update();
+            });
+        } else {
+            this.update();
+        }
+    }
+
     update() {
         // Get current configuration
         const robotConfig = this.robot.getConfig();

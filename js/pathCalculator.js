@@ -85,8 +85,6 @@ class PathCalculator {
     }
     
     calculateMoveBlock(startX, startY, startAngle, direction, degrees, robotConfig) {
-        const points = [];
-        
         // Convert direction to a value between -100 and 100
         direction = Math.max(-100, Math.min(100, direction));
         
@@ -158,11 +156,14 @@ class PathCalculator {
 
             for (let i = 0; i <= numSteps; i++) {
                 if (i > 0) {
-                    // Move one step along the current heading, then update the heading.
-                    const stepAngleRad = ((currentAngle + 90) * Math.PI) / 180;
-                    currentX += deltaDistance * Math.cos(stepAngleRad);
-                    currentY += deltaDistance * Math.sin(stepAngleRad);
-                    currentAngle += -1 * driftOffset * (deltaDistance / 100);
+                    // Drift turns this "straight" move into a gentle arc. Translate along the
+                    // heading at the step's midpoint (current + half the step's drift) for the
+                    // same on-arc accuracy as the arc branch, then apply the full heading change.
+                    const dThetaDeg = -1 * driftOffset * (deltaDistance / 100);
+                    const midAngleRad = ((currentAngle + dThetaDeg / 2 + 90) * Math.PI) / 180;
+                    currentX += deltaDistance * Math.cos(midAngleRad);
+                    currentY += deltaDistance * Math.sin(midAngleRad);
+                    currentAngle += dThetaDeg;
                 }
 
                 // Calculate wheel positions for visualization
@@ -273,15 +274,19 @@ class PathCalculator {
                     
                     // Calculate change in angle (scaled by the turn calibration factor)
                     const deltaTheta = ((deltaRight - deltaLeft) / robotConfig.wheelBase) * turnFactor;
-                    
-                    // Calculate change in position (using average distance and current angle)
+
+                    // Calculate change in position (using average distance).
+                    // Translate along the heading at the MIDPOINT of this step (current
+                    // heading + half the step's turn) rather than the start-of-step heading.
+                    // This midpoint rule keeps points on the true circular arc (O(δ³) error)
+                    // instead of drifting off it as start-of-step forward-Euler does (O(δ²)).
                     const deltaDistance = (deltaLeft + deltaRight) / 2;
                     // Add 90° so that 0° points up instead of right
-                    const currentAngleRad = ((currentAngle + 90) * Math.PI) / 180;
-                    
-                    currentX += deltaDistance * Math.cos(currentAngleRad);
+                    const midAngleRad = ((currentAngle + 90) * Math.PI) / 180 + deltaTheta / 2;
+
+                    currentX += deltaDistance * Math.cos(midAngleRad);
                     // Y-axis increases upward, use standard mathematical convention
-                    currentY += deltaDistance * Math.sin(currentAngleRad);
+                    currentY += deltaDistance * Math.sin(midAngleRad);
                     currentAngle += deltaTheta * (180 / Math.PI);
                 }
                 
