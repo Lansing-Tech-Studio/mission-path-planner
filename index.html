@@ -52,9 +52,57 @@
                     
                     <!-- Setup Tab -->
                     <div class="tab-content" data-tab="setup">
+                    <!-- Mat Selection Section -->
+                    <section class="section collapsed">
+                        <h2 class="section-header">Mission Mat<span class="collapse-icon">+</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="matSelect">Select Mat:</label>
+                            <select id="matSelect">
+                                <option value="blank">Blank Mat</option>
+                                <option value="2026-bioglow" selected>2026 BIOGLOW</option>
+                                <option value="2025-unearthed">2025 Unearthed</option>
+                                <option value="2024-submerged">2024 Submerged</option>
+                                <option value="2023-masterpiece">2023 Masterpiece</option>
+                                <option value="custom">Custom URL</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="customMatUrlGroup" style="display: none;">
+                            <label for="customMatUrl">Custom Mat URL:</label>
+                            <input type="url" id="customMatUrl" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label for="matAlignment">Mat Alignment:</label>
+                            <select id="matAlignment">
+                                <option value="centered">Centered</option>
+                                <option value="right">Right-Aligned (Single Home)</option>
+                            </select>
+                        </div>
+                        </div>
+                    </section>
+
+                    <!-- Starting Position Section -->
+                    <section class="section collapsed">
+                        <h2 class="section-header">Starting Position<span class="collapse-icon">+</span></h2>
+                        <div class="section-content">
+                        <div class="form-group">
+                            <label for="startX">X Position (cm, from left edge):</label>
+                            <input type="number" id="startX" value="30" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="startY">Y Position (cm, from bottom edge):</label>
+                            <input type="number" id="startY" value="0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="startAngle">Orientation (degrees, 0° = North):</label>
+                            <input type="number" id="startAngle" value="0" step="1">
+                        </div>
+                        </div>
+                    </section>
+
                     <!-- Team Info Section -->
-                    <section class="section">
-                        <h2 class="section-header">Team Info<span class="collapse-icon">−</span></h2>
+                    <section class="section collapsed">
+                        <h2 class="section-header">Team Info<span class="collapse-icon">+</span></h2>
                         <div class="section-content">
                         <div class="form-group">
                             <label for="teamName">Team Name:</label>
@@ -68,8 +116,8 @@
                     </section>
 
                     <!-- Robot Configuration Section -->
-                    <section class="section">
-                        <h2 class="section-header">Robot Configuration<span class="collapse-icon">−</span></h2>
+                    <section class="section collapsed">
+                        <h2 class="section-header">Robot Configuration<span class="collapse-icon">+</span></h2>
                         <div class="section-content">
                         <div class="form-group">
                             <label for="robotPreset">Load Preset:</label>
@@ -124,8 +172,8 @@
                     </section>
 
                     <!-- Calibration Section -->
-                    <section class="section">
-                        <h2 class="section-header">Calibration<span class="collapse-icon">−</span></h2>
+                    <section class="section collapsed">
+                        <h2 class="section-header">Calibration<span class="collapse-icon">+</span></h2>
                         <div class="section-content">
                         <p class="section-intro">Correction factors measured from your physical robot. They adjust only the simulated path, not the robot's dimensions.</p>
                         <div class="form-group">
@@ -152,8 +200,8 @@
                             </button>
                         </div>
 
-                        <section class="section calibration-help">
-                            <h3 class="section-header">How to Calibrate<span class="collapse-icon">−</span></h3>
+                        <section class="section calibration-help collapsed">
+                            <h3 class="section-header">How to Calibrate<span class="collapse-icon">+</span></h3>
                             <div class="section-content">
                             <p><strong>Distance Factor</strong></p>
                             <ol>
@@ -178,56 +226,9 @@
                         </div>
                     </section>
 
-                    <!-- Mat Selection Section -->
-                    <section class="section">
-                        <h2 class="section-header">Mission Mat<span class="collapse-icon">−</span></h2>
-                        <div class="section-content">
-                        <div class="form-group">
-                            <label for="matSelect">Select Mat:</label>
-                            <select id="matSelect">
-                                <option value="blank">Blank Mat</option>
-                                <option value="2025-unearthed" selected>2025 Unearthed</option>
-                                <option value="2024-submerged">2024 Submerged</option>
-                                <option value="2023-masterpiece">2023 Masterpiece</option>
-                                <option value="custom">Custom URL</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="customMatUrlGroup" style="display: none;">
-                            <label for="customMatUrl">Custom Mat URL:</label>
-                            <input type="url" id="customMatUrl" placeholder="https://...">
-                        </div>
-                        <div class="form-group">
-                            <label for="matAlignment">Mat Alignment:</label>
-                            <select id="matAlignment">
-                                <option value="centered">Centered</option>
-                                <option value="right">Right-Aligned (Single Home)</option>
-                            </select>
-                        </div>
-                        </div>
-                    </section>
-
-                    <!-- Starting Position Section -->
-                    <section class="section">
-                        <h2 class="section-header">Starting Position<span class="collapse-icon">−</span></h2>
-                        <div class="section-content">
-                        <div class="form-group">
-                            <label for="startX">X Position (cm, from left edge):</label>
-                            <input type="number" id="startX" value="30" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="startY">Y Position (cm, from bottom edge):</label>
-                            <input type="number" id="startY" value="0" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label for="startAngle">Orientation (degrees, 0° = North):</label>
-                            <input type="number" id="startAngle" value="0" step="1">
-                        </div>
-                        </div>
-                    </section>
-
                     <!-- Storage Management Section -->
-                    <section class="section storage-section">
-                        <h2 class="section-header">Storage Management<span class="collapse-icon">−</span></h2>
+                    <section class="section storage-section collapsed">
+                        <h2 class="section-header">Storage Management<span class="collapse-icon">+</span></h2>
                         <div class="section-content">
                         <div class="storage-usage">
                             <label>Browser Storage:</label>

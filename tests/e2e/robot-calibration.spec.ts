@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openSetup } from './helpers';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -6,7 +7,7 @@ test.describe('Robot Calibration', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Calibration lives in the Setup tab (Program is the default tab).
-    await page.locator('button[data-tab="setup"]').click();
+    await openSetup(page);
   });
 
   test('shows the three calibration inputs with defaults', async ({ page }) => {

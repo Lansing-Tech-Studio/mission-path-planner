@@ -32,14 +32,15 @@ test.describe('Mission Path Planner - Basic UI', () => {
     
     const teamInfoHeader = page.locator('.section-header').filter({ hasText: 'Team Info' });
     const section = page.locator('.section').filter({ has: teamInfoHeader });
-    
+
+    // Setup sections start collapsed.
+    await expect(section).toHaveClass(/collapsed/);
+
+    await teamInfoHeader.click();
     await expect(section).not.toHaveClass(/collapsed/);
-    
+
     await teamInfoHeader.click();
     await expect(section).toHaveClass(/collapsed/);
-    
-    await teamInfoHeader.click();
-    await expect(section).not.toHaveClass(/collapsed/);
   });
 
   test('should load robot presets', async ({ page }) => {

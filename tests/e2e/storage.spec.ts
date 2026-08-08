@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { openSetup } from './helpers';
 
 test.describe('Mission Path Planner - Storage', () => {
   test.beforeEach(async ({ page }) => {
@@ -11,7 +12,7 @@ test.describe('Mission Path Planner - Storage', () => {
   test.describe('Auto-save and restore', () => {
     test('should persist state across page reload', async ({ page }) => {
       // Navigate to Setup tab and modify team name
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       await page.locator('#teamName').fill('My Persistent Team');
       
       // Wait for debounced auto-save (500ms)
@@ -21,13 +22,13 @@ test.describe('Mission Path Planner - Storage', () => {
       await page.reload();
       
       // Navigate back to Setup tab and verify state persisted
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       await expect(page.locator('#teamName')).toHaveValue('My Persistent Team');
     });
 
     test('should persist robot configuration', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Modify robot configuration
       await page.locator('#robotLength').fill('25');
@@ -38,7 +39,7 @@ test.describe('Mission Path Planner - Storage', () => {
       
       // Reload and verify
       await page.reload();
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       await expect(page.locator('#robotLength')).toHaveValue('25');
       await expect(page.locator('#robotWidth')).toHaveValue('20');
@@ -73,7 +74,7 @@ test.describe('Mission Path Planner - Storage', () => {
   test.describe('Save robot configuration', () => {
     test('should save and load robot configuration', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Set custom robot values
       await page.locator('#robotLength').fill('18');
@@ -104,7 +105,7 @@ test.describe('Mission Path Planner - Storage', () => {
 
     test('should show saved robot in dropdown', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Handle the prompt dialog
       page.on('dialog', async dialog => {
@@ -129,7 +130,7 @@ test.describe('Mission Path Planner - Storage', () => {
   test.describe('Save program', () => {
     test('should save and load program', async ({ page }) => {
       // Modify team name
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       await page.locator('#teamName').fill('Program Test Team');
       
       // Add a move block
@@ -146,14 +147,14 @@ test.describe('Mission Path Planner - Storage', () => {
       await page.waitForTimeout(100);
       
       // Clear state
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       await page.locator('#teamName').fill('Different Team');
       
       // Load the saved program
       await page.locator('#savedPrograms').selectOption({ label: 'Test Program' });
       
       // Verify state is restored
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       await expect(page.locator('#teamName')).toHaveValue('Program Test Team');
     });
 
@@ -180,7 +181,7 @@ test.describe('Mission Path Planner - Storage', () => {
   test.describe('Storage management', () => {
     test('should display storage management section', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Find storage management section and expand it if collapsed
       const storageSection = page.locator('.storage-section');
@@ -199,7 +200,7 @@ test.describe('Mission Path Planner - Storage', () => {
 
     test('should show saved robots in storage management', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Handle the prompt dialog
       page.on('dialog', async dialog => {
@@ -217,7 +218,7 @@ test.describe('Mission Path Planner - Storage', () => {
 
     test('should show saved programs in storage management', async ({ page }) => {
       // Navigate to Setup tab to see storage section
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Handle the prompt dialog
       page.on('dialog', async dialog => {
@@ -235,7 +236,7 @@ test.describe('Mission Path Planner - Storage', () => {
 
     test('should delete saved robot from storage management', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Handle dialogs
       let dialogCount = 0;
@@ -269,7 +270,7 @@ test.describe('Mission Path Planner - Storage', () => {
 
     test('should clear all saved data', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Handle dialogs
       let dialogCount = 0;
@@ -302,7 +303,7 @@ test.describe('Mission Path Planner - Storage', () => {
   test.describe('Cancel dialogs', () => {
     test('should not save robot when prompt is cancelled', async ({ page }) => {
       // Navigate to Setup tab
-      await page.locator('button[data-tab="setup"]').click();
+      await openSetup(page);
       
       // Handle the prompt dialog - cancel it
       page.on('dialog', async dialog => {

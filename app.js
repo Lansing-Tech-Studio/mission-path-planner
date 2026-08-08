@@ -302,6 +302,15 @@ class MissionPlanner {
             }
         });
 
+        // Text-only fields: they aren't part of the path math, so persist them
+        // without paying for a full update()/re-render.
+        ['teamName', 'teamLogo', 'description', 'planDate'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => this.autoSave());
+            }
+        });
+
         // Reset calibration to defaults
         const resetCalibrationBtn = document.getElementById('resetCalibrationBtn');
         if (resetCalibrationBtn) {
@@ -516,6 +525,7 @@ class MissionPlanner {
         // Preset mat URLs (these would be actual image URLs in production)
         const matUrls = {
             'blank': '',
+            '2026-bioglow': 'img/2026-bioglow.jpeg',
             '2025-unearthed': 'img/2025-unearthed.jpeg',
             '2024-submerged': 'img/2024-submerged.jpeg',
             '2023-masterpiece': 'img/2023-masterpiece.jpeg'

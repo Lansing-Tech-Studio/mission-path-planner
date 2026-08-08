@@ -255,6 +255,17 @@ body {
     margin-bottom: 0;
 }
 
+/* Collapsed sections are header-only: drop the padding/margin that would
+   otherwise leave an empty strip below the header. */
+.section.collapsed {
+    padding-bottom: 0;
+}
+
+.section.collapsed .section-header {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
 .form-group {
     margin-bottom: 12px;
 }
