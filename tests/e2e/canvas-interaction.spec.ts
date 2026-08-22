@@ -55,4 +55,40 @@ test.describe('Canvas Interactions', () => {
     await matAlignment.selectOption('centered');
     await expect(matAlignment).toHaveValue('centered');
   });
+
+  test('dragging a rotated robot to the left edge leaves it touching the edge', async ({ page }) => {
+    await page.locator('button[data-tab="setup"]').click();
+    await page.locator('#robotPreset').selectOption('dadbot');
+    await page.locator('#startAngle').fill('-90');
+    await page.locator('#startX').fill('80');
+    await page.locator('#startY').fill('50');
+    await page.locator('#startX').dispatchEvent('change');
+
+    // Grab the robot at its axle center, then drag well past the left edge.
+    const grabAt = await page.evaluate(() => {
+      const planner = (window as any).missionPlanner;
+      const axle = planner.pathCalculator.anchorToAxle(planner.robot.getConfig());
+      return {
+        x: planner.canvas.coordToCanvasX(axle.x),
+        y: planner.canvas.coordToCanvasY(axle.y)
+      };
+    });
+
+    const box = (await page.locator('#missionCanvas').boundingBox())!;
+    await page.mouse.move(box.x + grabAt.x, box.y + grabAt.y);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 400, box.y + grabAt.y, { steps: 10 });
+    await page.mouse.up();
+
+    const result = await page.evaluate(() => {
+      const planner = (window as any).missionPlanner;
+      const config = planner.robot.getConfig();
+      const axle = planner.pathCalculator.anchorToAxle(config);
+      const extents = planner.pathCalculator.footprintExtents(config, config.startAngle);
+      return { startX: config.startX, leftEdgeOfRobot: axle.x + extents.minX };
+    });
+
+    expect(result.startX).toBeCloseTo(0, 5);
+    expect(result.leftEdgeOfRobot).toBeCloseTo(0, 5);
+  });
 });

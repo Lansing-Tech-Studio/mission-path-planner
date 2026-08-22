@@ -85,8 +85,15 @@ class PrintManager {
         
         // Get robot config for calculations
         const robotConfig = window.missionPlanner ? window.missionPlanner.robot.getConfig() : null;
-        let currentX = robotConfig ? robotConfig.startX : 0;
-        let currentY = robotConfig ? robotConfig.startY : 0;
+        const pathCalculator = window.missionPlanner ? window.missionPlanner.pathCalculator : null;
+
+        // The path walk runs in axle-center coordinates; reported positions are
+        // converted back to the anchor (bounding box corner) that the X/Y inputs use.
+        const startAxle = (robotConfig && pathCalculator)
+            ? pathCalculator.anchorToAxle(robotConfig)
+            : { x: 0, y: 0 };
+        let currentX = startAxle.x;
+        let currentY = startAxle.y;
         let currentAngle = robotConfig ? robotConfig.startAngle : 0;
         
         // Create ordered list
@@ -112,9 +119,12 @@ class PrintManager {
                     posDiv.style.color = '#4CAF50';
                     posDiv.style.borderLeft = '2px solid #4CAF50';
                     
-                    const xInches = (currentX / 2.54).toFixed(1);
-                    const yInches = (currentY / 2.54).toFixed(1);
-                    posDiv.innerHTML = `<em>T${ghostNumber++} \u2014 Position: X: ${currentX.toFixed(1)}cm (${xInches}in), Y: ${currentY.toFixed(1)}cm (${yInches}in), Angle: ${currentAngle.toFixed(0)}\u00b0</em>`;
+                    const anchor = pathCalculator
+                        ? pathCalculator.axleToAnchor(robotConfig, currentX, currentY, currentAngle)
+                        : { x: currentX, y: currentY };
+                    const xInches = (anchor.x / 2.54).toFixed(1);
+                    const yInches = (anchor.y / 2.54).toFixed(1);
+                    posDiv.innerHTML = `<em>T${ghostNumber++} \u2014 Position: X: ${anchor.x.toFixed(1)}cm (${xInches}in), Y: ${anchor.y.toFixed(1)}cm (${yInches}in), Angle: ${currentAngle.toFixed(0)}\u00b0</em>`;
                     li.appendChild(posDiv);
                 }
             } else if (block.type === 'move') {
@@ -143,8 +153,8 @@ class PrintManager {
                 }
                 
                 // Update position for next blocks (if valid)
-                if (block.valid !== false && robotConfig && window.missionPlanner && window.missionPlanner.pathCalculator) {
-                    const points = window.missionPlanner.pathCalculator.calculateMoveBlock(
+                if (block.valid !== false && robotConfig && pathCalculator) {
+                    const points = pathCalculator.calculateMoveBlock(
                         currentX, currentY, currentAngle,
                         block.direction,
                         block.degrees,

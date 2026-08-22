@@ -251,9 +251,9 @@ class BlockManager {
 
         const robotConfig = window.missionPlanner.robot.getConfig();
         const pathCalculator = window.missionPlanner.pathCalculator;
-        // Convert bottom-left corner coordinates to axle center
-        let x = robotConfig.startX + robotConfig.width / 2;
-        let y = robotConfig.startY + robotConfig.wheelOffset;
+        const axleCenter = pathCalculator.anchorToAxle(robotConfig);
+        let x = axleCenter.x;
+        let y = axleCenter.y;
         let angle = robotConfig.startAngle;
 
         const positions = [];

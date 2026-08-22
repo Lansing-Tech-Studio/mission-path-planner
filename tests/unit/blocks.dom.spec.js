@@ -1,4 +1,5 @@
 const BlockManager = require('../../js/blocks.js');
+const PathCalculator = require('../../js/pathCalculator.js');
 
 describe('BlockManager DOM behaviors', () => {
   let bm;
@@ -10,8 +11,16 @@ describe('BlockManager DOM behaviors', () => {
     // Minimal mission planner context
     window.missionPlanner = {
       update: jest.fn(),
-      pathCalculator: { calculateMoveBlock: jest.fn().mockReturnValue([]) },
-      robot: { getConfig: () => ({ startX: 30, startY: 30, startAngle: 0, wheelBase: 12 }) }
+      // Real geometry (anchor -> axle) with a stubbed move calculation.
+      pathCalculator: Object.assign(new PathCalculator(), {
+        calculateMoveBlock: jest.fn().mockReturnValue([])
+      }),
+      robot: {
+        getConfig: () => ({
+          startX: 30, startY: 30, startAngle: 0,
+          length: 16.5, width: 15, wheelOffset: 3.1, wheelBase: 12
+        })
+      }
     };
     bm = new BlockManager();
   });
