@@ -289,7 +289,8 @@ class StorageManager {
     
     // ========== Saved Programs ==========
     
-    saveProgram(name, fullState) {
+    // Pass an existing id to overwrite that program instead of creating a new one.
+    saveProgram(name, fullState, existingId = null) {
         try {
             const health = this.checkStorageHealth();
             if (health.isBlocked) {
@@ -297,12 +298,13 @@ class StorageManager {
             }
             
             const savedPrograms = this.loadSavedPrograms();
-            const id = this.generateId();
+            const existing = existingId ? savedPrograms[existingId] : null;
+            const id = existing ? existingId : this.generateId();
             
             savedPrograms[id] = {
                 id,
                 name: name.trim(),
-                createdAt: new Date().toISOString(),
+                createdAt: existing ? existing.createdAt : new Date().toISOString(),
                 lastModified: new Date().toISOString(),
                 version: this.version,
                 teamInfo: fullState.teamInfo || {},
@@ -335,6 +337,23 @@ class StorageManager {
     getProgram(id) {
         const savedPrograms = this.loadSavedPrograms();
         return savedPrograms[id] || null;
+    }
+    
+    renameProgram(id, name) {
+        try {
+            const savedPrograms = this.loadSavedPrograms();
+            if (!savedPrograms[id]) {
+                return { success: false, reason: 'not_found' };
+            }
+            
+            savedPrograms[id].name = name.trim();
+            savedPrograms[id].lastModified = new Date().toISOString();
+            localStorage.setItem(this.STORAGE_KEYS.savedPrograms, JSON.stringify(savedPrograms));
+            return { success: true };
+        } catch (error) {
+            console.error('Error renaming program:', error);
+            return { success: false, reason: 'error', error };
+        }
     }
     
     deleteProgram(id) {
