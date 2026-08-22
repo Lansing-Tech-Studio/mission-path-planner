@@ -93,6 +93,9 @@ class PrintManager {
         const ol = document.createElement('ol');
         ol.style.paddingLeft = '20px';
         
+        // Matches the ghost-robot "T" numbering drawn on the mat.
+        let ghostNumber = 1;
+        
         program.forEach((block, index) => {
             const li = document.createElement('li');
             li.style.marginBottom = '12px';
@@ -111,7 +114,7 @@ class PrintManager {
                     
                     const xInches = (currentX / 2.54).toFixed(1);
                     const yInches = (currentY / 2.54).toFixed(1);
-                    posDiv.innerHTML = `<em>Position: X: ${currentX.toFixed(1)}cm (${xInches}in), Y: ${currentY.toFixed(1)}cm (${yInches}in), Angle: ${currentAngle.toFixed(0)}\u00b0</em>`;
+                    posDiv.innerHTML = `<em>T${ghostNumber++} \u2014 Position: X: ${currentX.toFixed(1)}cm (${xInches}in), Y: ${currentY.toFixed(1)}cm (${yInches}in), Angle: ${currentAngle.toFixed(0)}\u00b0</em>`;
                     li.appendChild(posDiv);
                 }
             } else if (block.type === 'move') {

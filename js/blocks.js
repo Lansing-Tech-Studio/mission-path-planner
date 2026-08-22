@@ -307,13 +307,18 @@ class BlockManager {
         // Compute all block positions once (O(n)) so per-block "show position" markers
         // don't each re-simulate the prefix (which would be O(n^2)).
         const positions = this.calculateAllBlockPositions();
+        // Ghost-robot label counter; must stay in step with CanvasRenderer.drawTextBlockPositions
+        // so the "T" markers on the mat match the ones in the block list and the printout.
+        let ghostNumber = 1;
         this.blocks.forEach((block, index) => {
-            const blockElement = this.createBlockElement(block, index, positions[index]);
+            const showsPosition = block.type === 'text' && block.showPosition && positions[index];
+            const blockElement = this.createBlockElement(block, index, positions[index], showsPosition ? ghostNumber : null);
+            if (showsPosition) ghostNumber++;
             this.container.appendChild(blockElement);
         });
     }
 
-    createBlockElement(block, index, precomputedPosition) {
+    createBlockElement(block, index, precomputedPosition, ghostNumber) {
         const div = document.createElement('div');
         div.className = `program-block ${block.type}-block`;
         div.dataset.blockId = block.id;
@@ -371,7 +376,7 @@ class BlockManager {
                     positionInfo.className = 'block-position-info';
                     const xInches = (position.x / 2.54).toFixed(1);
                     const yInches = (position.y / 2.54).toFixed(1);
-                    positionInfo.innerHTML = `Position: X: ${position.x.toFixed(1)}cm (${xInches}in), Y: ${position.y.toFixed(1)}cm (${yInches}in), Angle: ${position.angle.toFixed(0)}°`;
+                    positionInfo.innerHTML = `${ghostNumber ? `T${ghostNumber} — ` : ''}Position: X: ${position.x.toFixed(1)}cm (${xInches}in), Y: ${position.y.toFixed(1)}cm (${yInches}in), Angle: ${position.angle.toFixed(0)}°`;
                     content.appendChild(positionInfo);
                 }
             }

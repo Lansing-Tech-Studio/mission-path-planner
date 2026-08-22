@@ -374,7 +374,13 @@ class MissionPlanner {
         });
         
         document.getElementById('printBtn').addEventListener('click', () => {
-            this.print.printPlan(this.getData(), this.canvas.canvas);
+            window.print();
+        });
+
+        // Ctrl+P bypasses the print button, so fill the print template here instead:
+        // window.print() fires this too, so both paths render the same page.
+        window.addEventListener('beforeprint', () => {
+            this.print.populatePrintTemplate(this.getData(), this.canvas.canvas);
         });
         
         // Save/Load Robot Config
