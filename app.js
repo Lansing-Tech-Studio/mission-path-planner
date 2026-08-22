@@ -8,6 +8,10 @@ class MissionPlanner {
         this.storage = null;
         this.print = null;
         
+        // Currently open saved program (null = unsaved/new) and whether it has unsaved edits
+        this.activeProgramId = null;
+        this.isDirty = false;
+        
         // Debounce timer for auto-save
         this.autoSaveTimer = null;
         this.autoSaveDelay = 500; // ms
@@ -36,6 +40,7 @@ class MissionPlanner {
         
         // Restore last state from localStorage
         this.restoreLastState();
+        this.setActiveProgram(localStorage.getItem('missionPlanner_activeProgram'));
         
         // Initial render
         this.update();
@@ -60,7 +65,9 @@ class MissionPlanner {
         
         // Debounce the save
         this.autoSaveTimer = setTimeout(() => {
-            const result = this.storage.saveLastState(this.getData());
+            const data = this.getData();
+            this.updateDirtyIndicator(data);
+            const result = this.storage.saveLastState(data);
             if (result.isWarning) {
                 this.showStorageWarning(result.percentUsed);
             }
@@ -392,12 +399,29 @@ class MissionPlanner {
             saveProgramBtn.addEventListener('click', () => this.saveCurrentProgram());
         }
         
+        const saveAsProgramBtn = document.getElementById('saveAsProgramBtn');
+        if (saveAsProgramBtn) {
+            saveAsProgramBtn.addEventListener('click', () => this.saveCurrentProgram(true));
+        }
+        
+        const renameProgramBtn = document.getElementById('renameProgramBtn');
+        if (renameProgramBtn) {
+            renameProgramBtn.addEventListener('click', () => this.renameActiveProgram());
+        }
+
+        const newProgramBtn = document.getElementById('newProgramBtn');
+        if (newProgramBtn) {
+            newProgramBtn.addEventListener('click', () => this.newProgram());
+        }
+        
         const savedPrograms = document.getElementById('savedPrograms');
         if (savedPrograms) {
             savedPrograms.addEventListener('change', () => {
                 if (savedPrograms.value) {
                     this.loadSavedProgram(savedPrograms.value);
-                    savedPrograms.value = ''; // Reset dropdown
+                } else {
+                    // Placeholder picked: detach from the saved program, keep the current work
+                    this.setActiveProgram(null);
                 }
             });
         }
@@ -584,6 +608,19 @@ class MissionPlanner {
     
     // ========== Robot Config Save/Load ==========
     
+    showToast(message) {
+        let el = document.getElementById('toast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'toast';
+            document.body.appendChild(el);
+        }
+        el.textContent = message;
+        el.classList.add('show');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => el.classList.remove('show'), 1500);
+    }
+
     saveCurrentRobot() {
         const name = prompt('Enter a name for this robot configuration:');
         if (!name || !name.trim()) {
@@ -594,7 +631,7 @@ class MissionPlanner {
         const result = this.storage.saveRobotConfig(name, config);
         
         if (result.success) {
-            alert(`Robot "${name}" saved successfully!`);
+            this.showToast(`Robot "${name}" saved`);
             this.updateStorageUI();
             if (result.isWarning) {
                 this.showStorageWarning(result.percentUsed);
@@ -629,17 +666,95 @@ class MissionPlanner {
     
     // ========== Program Save/Load ==========
     
-    saveCurrentProgram() {
-        const name = prompt('Enter a name for this program:');
-        if (!name || !name.trim()) {
+    setActiveProgram(id) {
+        const saved = id ? this.storage.getProgram(id) : null;
+        this.activeProgramId = saved ? id : null;
+        
+        if (this.activeProgramId) {
+            localStorage.setItem('missionPlanner_activeProgram', this.activeProgramId);
+        } else {
+            localStorage.removeItem('missionPlanner_activeProgram');
+        }
+        
+        // The dropdown doubles as the active-program indicator: it stays on the
+        // loaded program instead of resetting to the placeholder.
+        const dropdown = document.getElementById('savedPrograms');
+        if (dropdown) {
+            dropdown.value = this.activeProgramId || '';
+        }
+        
+        const renameBtn = document.getElementById('renameProgramBtn');
+        if (renameBtn) {
+            renameBtn.disabled = !this.activeProgramId;
+        }
+        
+        this.updateDirtyIndicator();
+    }
+    
+    // Marks the active program's dropdown entry with * while it differs from what is stored.
+    updateDirtyIndicator(data) {
+        const active = this.activeProgramId ? this.storage.getProgram(this.activeProgramId) : null;
+        this.isDirty = !!active && this.programSnapshot(active) !== this.programSnapshot(data || this.getData());
+        
+        const dropdown = document.getElementById('savedPrograms');
+        const option = dropdown && active ? dropdown.querySelector(`option[value="${active.id}"]`) : null;
+        if (option) {
+            option.textContent = this.isDirty ? `${active.name} *` : active.name;
+        }
+    }
+    
+    // Only the fields StorageManager.saveProgram persists take part in the comparison.
+    programSnapshot(source) {
+        return JSON.stringify({
+            teamInfo: source.teamInfo || {},
+            mat: source.mat || {},
+            robot: source.robot || {},
+            program: source.program || [],
+            planDate: source.planDate || ''
+        });
+    }
+    
+    // Empties the steps and detaches from the saved program; robot, mat and team info stay.
+    newProgram() {
+        if (this.blocks.getProgram().length && !confirm('Clear all steps and start a new program?')) {
             return;
         }
         
+        this.blocks.loadProgram([]);
+        this.setActiveProgram(null);
+        this.update();
+    }
+    
+    renameActiveProgram() {
+        const active = this.activeProgramId ? this.storage.getProgram(this.activeProgramId) : null;
+        if (!active) return;
+        
+        const name = prompt('Rename program:', active.name);
+        if (!name || !name.trim() || name.trim() === active.name) {
+            return;
+        }
+        
+        this.storage.renameProgram(this.activeProgramId, name);
+        this.updateStorageUI();
+    }
+    
+    saveCurrentProgram(saveAs = false) {
+        const active = this.activeProgramId ? this.storage.getProgram(this.activeProgramId) : null;
+        let name = active ? active.name : null;
+        
+        if (saveAs || !active) {
+            name = prompt('Enter a name for this program:', active ? `${active.name} copy` : '');
+            if (!name || !name.trim()) {
+                return;
+            }
+        }
+        
         const data = this.getData();
-        const result = this.storage.saveProgram(name, data);
+        const result = this.storage.saveProgram(name, data, saveAs ? null : this.activeProgramId);
         
         if (result.success) {
-            alert(`Program "${name}" saved successfully!`);
+            this.showToast(`Program "${name}" saved`);
+            this.setActiveProgram(result.id);
             this.updateStorageUI();
             if (result.isWarning) {
                 this.showStorageWarning(result.percentUsed);
@@ -655,6 +770,7 @@ class MissionPlanner {
         const saved = this.storage.getProgram(id);
         if (saved) {
             this.loadData(saved);
+            this.setActiveProgram(id);
             this.update();
         }
     }
@@ -663,6 +779,9 @@ class MissionPlanner {
         const saved = this.storage.getProgram(id);
         if (saved && confirm(`Delete program "${saved.name}"?`)) {
             this.storage.deleteProgram(id);
+            if (this.activeProgramId === id) {
+                this.setActiveProgram(null);
+            }
             this.updateStorageUI();
         }
     }
@@ -706,6 +825,8 @@ class MissionPlanner {
             option.textContent = program.name;
             dropdown.appendChild(option);
         });
+        dropdown.value = this.activeProgramId || '';
+        this.updateDirtyIndicator();
     }
     
     updateStorageManagement(summary) {
@@ -769,8 +890,9 @@ class MissionPlanner {
     clearAllSavedData() {
         if (confirm('Are you sure you want to delete ALL saved robots and programs? This cannot be undone.')) {
             this.storage.clearAllSavedData();
+            this.setActiveProgram(null);
             this.updateStorageUI();
-            alert('All saved data has been cleared.');
+            this.showToast('All saved data cleared');
         }
     }
 }

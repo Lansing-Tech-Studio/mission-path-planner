@@ -150,12 +150,18 @@ test.describe('Mission Path Planner - Storage', () => {
       await openSetup(page);
       await page.locator('#teamName').fill('Different Team');
       
-      // Load the saved program
-      await page.locator('#savedPrograms').selectOption({ label: 'Test Program' });
+      // Editing after a save marks the program dirty
+      const programId = await page.locator('#savedPrograms option', { hasText: 'Test Program' }).getAttribute('value') as string;
+      await expect(page.locator(`#savedPrograms option[value="${programId}"]`)).toHaveText('Test Program *');
       
-      // Verify state is restored
+      // Load the saved program
+      await page.locator('#savedPrograms').selectOption(programId);
+      
+      // Verify state is restored, dropdown stays pinned, and the dirty marker clears
       await openSetup(page);
       await expect(page.locator('#teamName')).toHaveValue('Program Test Team');
+      await expect(page.locator('#savedPrograms')).toHaveValue(programId);
+      await expect(page.locator(`#savedPrograms option[value="${programId}"]`)).toHaveText('Test Program');
     });
 
     test('should show saved program in dropdown', async ({ page }) => {

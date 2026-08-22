@@ -615,15 +615,22 @@ body {
 }
 
 .canvas-description {
-    background-color: #ffffff;
-    padding: 15px;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 15px;
     flex-shrink: 0;
+    margin-bottom: 15px;
 }
 
-.canvas-description label {
+.plan-details-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.plan-details-row .icon-btn {
+    margin-left: auto;
+}
+
+.canvas-description .form-group label {
     display: block;
     font-size: 13px;
     color: #666;
@@ -731,6 +738,17 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+}
+
+.icon-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.icon-btn:disabled:hover {
+    background-color: #fff;
+    border-color: #ddd;
+    color: #666;
 }
 
 .icon-btn:hover {
@@ -1125,4 +1143,26 @@ body {
 #clearStorageBtn .icon {
     width: 14px;
     height: 14px;
+}
+
+/* Transient success toast */
+#toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #4caf50;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-size: 14px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+#toast.show {
+    opacity: 1;
 }

@@ -247,7 +247,7 @@ describe('MissionPlanner Integration', () => {
       mission.saveCurrentRobot();
       
       expect(promptSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'));
+      expect(document.getElementById('toast').textContent).toContain('saved');
       
       const savedRobots = mission.storage.loadSavedRobots();
       expect(Object.keys(savedRobots).length).toBe(1);
@@ -304,7 +304,7 @@ describe('MissionPlanner Integration', () => {
       mission.saveCurrentProgram();
       
       expect(promptSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('saved successfully'));
+      expect(document.getElementById('toast').textContent).toContain('saved');
       
       const savedPrograms = mission.storage.loadSavedPrograms();
       expect(Object.keys(savedPrograms).length).toBe(1);
@@ -312,6 +312,92 @@ describe('MissionPlanner Integration', () => {
       
       promptSpy.mockRestore();
       alertSpy.mockRestore();
+    });
+
+    it('saving again overwrites the active program, Save As makes a copy', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('Original');
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+      mission.saveCurrentProgram();
+      const originalId = mission.activeProgramId;
+      expect(originalId).toBeTruthy();
+
+      // Second save reuses the active id — no prompt, no new entry
+      promptSpy.mockClear();
+      mission.saveCurrentProgram();
+      expect(promptSpy).not.toHaveBeenCalled();
+      expect(Object.keys(mission.storage.loadSavedPrograms()).length).toBe(1);
+      expect(mission.activeProgramId).toBe(originalId);
+
+      // Save As creates a copy and becomes the active program
+      promptSpy.mockReturnValue('Copy');
+      mission.saveCurrentProgram(true);
+      const saved = mission.storage.loadSavedPrograms();
+      expect(Object.keys(saved).length).toBe(2);
+      expect(mission.activeProgramId).not.toBe(originalId);
+      expect(saved[mission.activeProgramId].name).toBe('Copy');
+
+      // Deleting the active program clears the label
+      jest.spyOn(window, 'confirm').mockReturnValue(true);
+      mission.deleteSavedProgram(mission.activeProgramId);
+      expect(mission.activeProgramId).toBeNull();
+
+      promptSpy.mockRestore();
+      alertSpy.mockRestore();
+    });
+
+    it('tracks unsaved changes and renames the active program', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('Original');
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+      mission.saveCurrentProgram();
+      expect(mission.isDirty).toBe(false);
+
+      document.getElementById('teamName').value = 'Changed Team';
+      mission.updateDirtyIndicator();
+      expect(mission.isDirty).toBe(true);
+
+      promptSpy.mockReturnValue('Renamed');
+      mission.renameActiveProgram();
+      expect(mission.storage.getProgram(mission.activeProgramId).name).toBe('Renamed');
+      expect(mission.isDirty).toBe(true);
+
+      promptSpy.mockRestore();
+      alertSpy.mockRestore();
+    });
+
+    it('newProgram clears the steps and detaches from the saved program', () => {
+      const promptSpy = jest.spyOn(window, 'prompt').mockReturnValue('Original');
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+      mission.blocks.addMoveBlock();
+      mission.saveCurrentProgram();
+      const savedId = mission.activeProgramId;
+      expect(mission.blocks.getProgram().length).toBe(1);
+
+      mission.newProgram();
+
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(mission.blocks.getProgram().length).toBe(0);
+      expect(mission.activeProgramId).toBeNull();
+      // The saved copy survives untouched
+      expect(mission.storage.getProgram(savedId).program.length).toBe(1);
+
+      promptSpy.mockRestore();
+      alertSpy.mockRestore();
+      confirmSpy.mockRestore();
+    });
+
+    it('newProgram keeps the steps when the confirm is cancelled', () => {
+      const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+      mission.blocks.addMoveBlock();
+      mission.newProgram();
+
+      expect(mission.blocks.getProgram().length).toBe(1);
+
+      confirmSpy.mockRestore();
     });
 
     it('saveCurrentProgram does nothing when prompt cancelled', () => {
