@@ -408,6 +408,11 @@ class MissionPlanner {
         if (renameProgramBtn) {
             renameProgramBtn.addEventListener('click', () => this.renameActiveProgram());
         }
+
+        const newProgramBtn = document.getElementById('newProgramBtn');
+        if (newProgramBtn) {
+            newProgramBtn.addEventListener('click', () => this.newProgram());
+        }
         
         const savedPrograms = document.getElementById('savedPrograms');
         if (savedPrograms) {
@@ -603,6 +608,19 @@ class MissionPlanner {
     
     // ========== Robot Config Save/Load ==========
     
+    showToast(message) {
+        let el = document.getElementById('toast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'toast';
+            document.body.appendChild(el);
+        }
+        el.textContent = message;
+        el.classList.add('show');
+        clearTimeout(this.toastTimer);
+        this.toastTimer = setTimeout(() => el.classList.remove('show'), 1500);
+    }
+
     saveCurrentRobot() {
         const name = prompt('Enter a name for this robot configuration:');
         if (!name || !name.trim()) {
@@ -613,7 +631,7 @@ class MissionPlanner {
         const result = this.storage.saveRobotConfig(name, config);
         
         if (result.success) {
-            alert(`Robot "${name}" saved successfully!`);
+            this.showToast(`Robot "${name}" saved`);
             this.updateStorageUI();
             if (result.isWarning) {
                 this.showStorageWarning(result.percentUsed);
@@ -696,6 +714,17 @@ class MissionPlanner {
         });
     }
     
+    // Empties the steps and detaches from the saved program; robot, mat and team info stay.
+    newProgram() {
+        if (this.blocks.getProgram().length && !confirm('Clear all steps and start a new program?')) {
+            return;
+        }
+        
+        this.blocks.loadProgram([]);
+        this.setActiveProgram(null);
+        this.update();
+    }
+    
     renameActiveProgram() {
         const active = this.activeProgramId ? this.storage.getProgram(this.activeProgramId) : null;
         if (!active) return;
@@ -724,7 +753,7 @@ class MissionPlanner {
         const result = this.storage.saveProgram(name, data, saveAs ? null : this.activeProgramId);
         
         if (result.success) {
-            alert(`Program "${name}" saved successfully!`);
+            this.showToast(`Program "${name}" saved`);
             this.setActiveProgram(result.id);
             this.updateStorageUI();
             if (result.isWarning) {
@@ -863,7 +892,7 @@ class MissionPlanner {
             this.storage.clearAllSavedData();
             this.setActiveProgram(null);
             this.updateStorageUI();
-            alert('All saved data has been cleared.');
+            this.showToast('All saved data cleared');
         }
     }
 }
