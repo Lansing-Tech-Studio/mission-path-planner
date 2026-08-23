@@ -4,18 +4,52 @@ class PathCalculator {
         this.pathResolution = 1; // Calculate path point every 1 degree of wheel rotation
     }
     
+    // Offsets of the robot's rotated bounding box relative to its axle center, in cm.
+    // Local frame: wheelOffset behind the axle, length-wheelOffset ahead, +/-width/2
+    // across. 0 degrees faces up (+Y), positive angles turn counter-clockwise.
+    footprintExtents(robotConfig, angleDeg) {
+        const angleRad = ((angleDeg + 90) * Math.PI) / 180;
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+        const halfWidth = robotConfig.width / 2;
+
+        const xs = [];
+        const ys = [];
+        for (const along of [-robotConfig.wheelOffset, robotConfig.length - robotConfig.wheelOffset]) {
+            for (const across of [-halfWidth, halfWidth]) {
+                xs.push(along * cos - across * sin);
+                ys.push(along * sin + across * cos);
+            }
+        }
+
+        return {
+            minX: Math.min(...xs), maxX: Math.max(...xs),
+            minY: Math.min(...ys), maxY: Math.max(...ys)
+        };
+    }
+
+    // robotConfig.startX/startY are the minimum X and Y of the robot's ROTATED
+    // footprint, so X=0 means touching the mat's left edge at any heading. The
+    // offset to the axle center must rotate with startAngle; assuming it is always
+    // (width/2, wheelOffset) leaves the robot short of, or hanging over, the edge.
+    anchorToAxle(robotConfig) {
+        const extents = this.footprintExtents(robotConfig, robotConfig.startAngle);
+        return { x: robotConfig.startX - extents.minX, y: robotConfig.startY - extents.minY };
+    }
+
+    axleToAnchor(robotConfig, axleX, axleY, angleDeg) {
+        const extents = this.footprintExtents(robotConfig, angleDeg);
+        return { x: axleX + extents.minX, y: axleY + extents.minY };
+    }
+
     calculatePath(program, robotConfig) {
         if (!program || program.length === 0) {
             return { points: [], valid: true };
         }
         
-        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
-        // (minimum X and minimum Y of the robot rectangle)
-        // Convert to axle center for path calculations
-        // At 0° (facing up): back is at bottom, front is at top
-        // Axle is wheelOffset from back, centered horizontally
-        let x = robotConfig.startX + robotConfig.width / 2;
-        let y = robotConfig.startY + robotConfig.wheelOffset;
+        const axleCenter = this.anchorToAxle(robotConfig);
+        let x = axleCenter.x;
+        let y = axleCenter.y;
         let angle = robotConfig.startAngle;
         
         // Calculate initial wheel positions

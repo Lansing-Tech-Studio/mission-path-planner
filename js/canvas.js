@@ -3,6 +3,13 @@ class CanvasRenderer {
     constructor() {
         this.canvas = document.getElementById('missionCanvas');
         this.ctx = this.canvas.getContext('2d');
+
+        // Anchor <-> axle geometry lives in PathCalculator so the canvas, the path and
+        // the block list cannot drift apart on where the robot actually sits.
+        const PathCalculatorClass =
+            (typeof PathCalculator !== 'undefined') ? PathCalculator :
+            (typeof require !== 'undefined' ? require('./pathCalculator.js') : null);
+        this.geometry = PathCalculatorClass ? new PathCalculatorClass() : null;
         
         // Table is 8 foot x 4 foot (96" x 48" or 243.84cm x 121.92cm)
         this.tableWidth = 243.84; // cm (96 inches / 8 feet)
@@ -151,15 +158,10 @@ class CanvasRenderer {
     }
     
     isPointInRobot(x, y, robotConfig) {
-        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
-        // (minimum X and minimum Y of the robot rectangle)
-        // The axle is at wheelOffset from the back edge, centered horizontally
-        // At 0° (facing up): back is at bottom, front is at top
-        const axleCenterX = robotConfig.startX + robotConfig.width / 2;
-        const axleCenterY = robotConfig.startY + robotConfig.wheelOffset;
+        const axleCenter = this.geometry.anchorToAxle(robotConfig);
         
-        const dx = x - axleCenterX;
-        const dy = y - axleCenterY;
+        const dx = x - axleCenter.x;
+        const dy = y - axleCenter.y;
         
         // Rotate point to robot's local coordinate system
         // Use negative angle for inverse rotation (world to local)
@@ -181,10 +183,9 @@ class CanvasRenderer {
     
     getRotationHandlePosition(robotConfig) {
         // Calculate rotation handle position in mat coordinates
-        // robotConfig.startX/startY is the robot's bounding box lower-left corner
-        // Convert to axle center for rotation calculations
-        const axleCenterX = robotConfig.startX + robotConfig.width / 2;
-        const axleCenterY = robotConfig.startY + robotConfig.wheelOffset;
+        const axleCenter = this.geometry.anchorToAxle(robotConfig);
+        const axleCenterX = axleCenter.x;
+        const axleCenterY = axleCenter.y;
         
         // Add 90° so that 0° points up instead of right
         const angleRad = ((robotConfig.startAngle + 90) * Math.PI) / 180;
@@ -401,10 +402,9 @@ class CanvasRenderer {
             }
         } else if (this.isRotating && this.robotConfig) {
             // Calculate angle from robot axle center to mouse
-            const axleCenterX = this.robotConfig.startX + this.robotConfig.width / 2;
-            const axleCenterY = this.robotConfig.startY + this.robotConfig.wheelOffset;
-            const dx = matX - axleCenterX;
-            const dy = matY - axleCenterY;
+            const axleCenter = this.geometry.anchorToAxle(this.robotConfig);
+            const dx = matX - axleCenter.x;
+            const dy = matY - axleCenter.y;
             // Y-axis increases upward, use standard mathematical convention
             // Subtract 90° so that 0° points up instead of right
             const angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
@@ -412,8 +412,16 @@ class CanvasRenderer {
             // Snap to 15 degree increments
             const snappedAngle = Math.round(angle / 15) * 15;
             
-            // Update form input
+            // The robot pivots about its axle, so the anchor (the rotated bounding box
+            // corner) moves and has to be rewritten.
+            const anchor = this.geometry.axleToAnchor(
+                this.robotConfig, axleCenter.x, axleCenter.y, snappedAngle
+            );
+
+            // Update form inputs
             document.getElementById('startAngle').value = snappedAngle;
+            document.getElementById('startX').value = anchor.x.toFixed(1);
+            document.getElementById('startY').value = anchor.y.toFixed(1);
 
             // Trigger update (batched per frame during the drag)
             this.requestPlannerUpdate();
@@ -422,9 +430,13 @@ class CanvasRenderer {
             const newX = matX - this.dragOffsetX;
             const newY = matY - this.dragOffsetY;
             
-            // Clamp to mat bounds
-            const clampedX = Math.max(0, Math.min(this.matCoordWidth, newX));
-            const clampedY = Math.max(0, Math.min(this.matCoordHeight, newY));
+            // Clamp to mat bounds. The anchor is the footprint's min corner, so the
+            // upper bound is the mat minus the footprint's span at this heading.
+            const extents = this.geometry.footprintExtents(this.robotConfig, this.robotConfig.startAngle);
+            const maxX = this.matCoordWidth - (extents.maxX - extents.minX);
+            const maxY = this.matCoordHeight - (extents.maxY - extents.minY);
+            const clampedX = Math.max(0, Math.min(maxX, newX));
+            const clampedY = Math.max(0, Math.min(maxY, newY));
             
             // Update form inputs
             document.getElementById('startX').value = clampedX.toFixed(1);
@@ -519,7 +531,8 @@ class CanvasRenderer {
         this.drawTextBlockPositions(robotConfig);
         
         // Draw starting robot position
-        this.drawRobot(robotConfig, robotConfig.startX, robotConfig.startY, robotConfig.startAngle);
+        const startAxle = this.geometry.anchorToAxle(robotConfig);
+        this.drawRobot(robotConfig, startAxle.x, startAxle.y, robotConfig.startAngle);
         
         // Draw final robot position if path exists
         if (path && path.points && path.points.length > 0) {
@@ -941,20 +954,10 @@ class CanvasRenderer {
     drawRobot(robotConfig, x, y, angleDeg, alpha = 1.0) {
         this.ctx.save();
         
-        // robotConfig.startX/startY represent the robot's bounding box lower-left corner
-        // Path points (x, y) use axle center coordinates for accurate movement calculations
-        // If drawing the starting position, convert from corner to axle center
-        let axleCenterX = x;
-        let axleCenterY = y;
-        
-        // For starting position, convert bounding box corner to axle center
-        if (x === robotConfig.startX && y === robotConfig.startY) {
-            axleCenterX = x + robotConfig.width / 2;
-            axleCenterY = y + robotConfig.wheelOffset;
-        }
-        
-        const screenX = this.coordToCanvasX(axleCenterX);
-        const screenY = this.coordToCanvasY(axleCenterY);
+        // x/y are always an axle center: a path point that happens to equal the anchor
+        // must not be re-converted as if it were one.
+        const screenX = this.coordToCanvasX(x);
+        const screenY = this.coordToCanvasY(y);
         
         // Translate to robot position
         this.ctx.translate(screenX, screenY);

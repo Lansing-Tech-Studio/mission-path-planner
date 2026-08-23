@@ -223,7 +223,8 @@ describe('CanvasRenderer', () => {
     renderer.robotConfig = robot;
     renderer.isRotating = true;
     
-    document.body.innerHTML = '<input id="startAngle" value="0" />';
+    document.body.innerHTML =
+      '<input id="startAngle" value="0" /><input id="startX" value="30" /><input id="startY" value="30" />';
     canvasEl = document.createElement('canvas');
     renderer.canvas = canvasEl;
     
@@ -331,8 +332,7 @@ describe('CanvasRenderer', () => {
       };
       
       const handle = renderer.getRotationHandlePosition(robot);
-      const axleCenterX = robot.startX + robot.width / 2;
-      const axleCenterY = robot.startY + robot.wheelOffset;
+      const { x: axleCenterX, y: axleCenterY } = renderer.geometry.anchorToAxle(robot);
       
       expect(handle.x).toBeCloseTo(axleCenterX, 2);
       expect(handle.y).toBeGreaterThan(axleCenterY);
@@ -354,8 +354,7 @@ describe('CanvasRenderer', () => {
       };
       
       const handle = renderer.getRotationHandlePosition(robot);
-      const axleCenterX = robot.startX + robot.width / 2;
-      const axleCenterY = robot.startY + robot.wheelOffset;
+      const { x: axleCenterX, y: axleCenterY } = renderer.geometry.anchorToAxle(robot);
       
       // At 90° (counterclockwise from north), robot faces west (left), handle is further left
       expect(handle.y).toBeCloseTo(axleCenterY, 2);
@@ -378,8 +377,7 @@ describe('CanvasRenderer', () => {
       };
       
       const handle = renderer.getRotationHandlePosition(robot);
-      const axleCenterX = robot.startX + robot.width / 2;
-      const axleCenterY = robot.startY + robot.wheelOffset;
+      const { x: axleCenterX, y: axleCenterY } = renderer.geometry.anchorToAxle(robot);
       
       expect(handle.x).toBeCloseTo(axleCenterX, 2);
       expect(handle.y).toBeLessThan(axleCenterY);
@@ -401,8 +399,7 @@ describe('CanvasRenderer', () => {
       };
       
       const handle = renderer.getRotationHandlePosition(robot);
-      const axleCenterX = robot.startX + robot.width / 2;
-      const axleCenterY = robot.startY + robot.wheelOffset;
+      const { x: axleCenterX, y: axleCenterY } = renderer.geometry.anchorToAxle(robot);
       
       // At 270° (counterclockwise from north), robot faces east (right), handle is further right
       expect(handle.y).toBeCloseTo(axleCenterY, 2);
@@ -430,8 +427,7 @@ describe('CanvasRenderer', () => {
       angles.forEach(angle => {
         robot.startAngle = angle;
         const handle = renderer.getRotationHandlePosition(robot);
-        const axleCenterX = robot.startX + robot.width / 2;
-        const axleCenterY = robot.startY + robot.wheelOffset;
+        const { x: axleCenterX, y: axleCenterY } = renderer.geometry.anchorToAxle(robot);
         
         const dx = handle.x - axleCenterX;
         const dy = handle.y - axleCenterY;

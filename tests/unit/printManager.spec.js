@@ -1,4 +1,5 @@
 const PrintManager = require('../../js/print.js');
+const PathCalculator = require('../../js/pathCalculator.js');
 
 describe('PrintManager', () => {
   let pm;
@@ -25,12 +26,13 @@ describe('PrintManager', () => {
     // Minimal missionPlanner context for populateProgramBlocks
     window.missionPlanner = {
       robot: { getConfig: () => ({ length: 20, width: 15, wheelOffset: 3, wheelCircumference: 19.6, wheelBase: 13.3, startX: 30, startY: 30, startAngle: 0 }) },
-      pathCalculator: {
+      // Real geometry (anchor <-> axle) with a stubbed move calculation.
+      pathCalculator: Object.assign(new PathCalculator(), {
         calculateMoveBlock: (x, y, angle, dir, deg, robot) => [
           { x, y, angle },
           { x: x + 1, y: y + 1, angle: angle + 5 }
         ]
-      }
+      })
     };
   });
 
@@ -80,6 +82,25 @@ describe('PrintManager', () => {
     const spy = jest.spyOn(window, 'print').mockImplementation(() => {});
     pm.printPlan(data, sourceCanvas);
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('reports ghost positions in the same anchor frame as the X/Y inputs', () => {
+    // The printed T-positions must match the Starting Position row and the inputs,
+    // not the axle center the path walk runs in - at any heading.
+    window.missionPlanner.robot.getConfig = () => ({
+      length: 20, width: 15, wheelOffset: 3, wheelCircumference: 19.6, wheelBase: 13.3,
+      startX: 30, startY: 30, startAngle: -90
+    });
+    const data = {
+      teamInfo: { name: 'Test Team' },
+      program: [{ type: 'text', content: 'Start here', showPosition: true }],
+      robot: window.missionPlanner.robot.getConfig()
+    };
+
+    pm.populatePrintTemplate(data, sourceCanvas);
+
+    expect(document.getElementById('printProgramBlocks').innerHTML)
+      .toContain('X: 30.0cm (11.8in), Y: 30.0cm (11.8in)');
   });
 
   it('handles text blocks with showPosition enabled', () => {
